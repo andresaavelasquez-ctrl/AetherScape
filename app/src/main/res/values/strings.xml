@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">AetherScape</string>
+    <string name="wallpaper_name">AetherScape · Paisaje climático</string>
+    <string name="wallpaper_description">Paisaje procedural cozy que cambia con la hora, el clima y la estación.</string>
+</resources>
