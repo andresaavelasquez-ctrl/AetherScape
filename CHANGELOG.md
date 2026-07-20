@@ -1,3 +1,15 @@
+## v0.5.0-beta.6
+
+- Vista previa animada dentro del menú usando las mismas capas visuales; ya no usa una captura estática.
+- Renderizado continuo forzado para evitar fondos congelados después de la vista previa.
+- Interacción táctil: luces, ráfagas y luciérnagas reaccionan al toque.
+- Parallax mixto mediante desplazamiento del launcher y acelerómetro suave.
+- Cámara unificada de 1000 unidades para vertical y horizontal, sin estirar montañas.
+- Árboles y faroles anclados analíticamente al terreno; no quedan estampados en pantalla.
+- Capas reordenadas y dos terrenos independientes para profundidad correcta.
+- Nuevas siluetas de montañas, bosques, nubes, sol y luna.
+- Carga segura de recursos y fallback de FrameBuffer para dispositivos con poca memoria.
+
 ## v0.4.0-beta.5 — GPU Layer Composer
 
 - Migración del live wallpaper desde Canvas a libGDX/OpenGL ES 2.0.

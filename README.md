@@ -1,6 +1,6 @@
 # AetherScape
 
-**AetherScape v0.4.0-beta.5** es una aplicación Android de fondo vivo climático. Esta actualización reemplaza el renderer principal basado en `Canvas` por un compositor acelerado mediante **libGDX 1.14.2 y OpenGL ES 2.0**.
+**AetherScape v0.5.0-beta.6** es una aplicación Android de fondo vivo climático. Esta actualización reemplaza el renderer principal basado en `Canvas` por un compositor acelerado mediante **libGDX 1.14.2 y OpenGL ES 2.0**.
 
 ![GPU renderer preview](docs/renderer-v3-gpu-preview.png)
 
@@ -91,7 +91,7 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ```bash
 bash scripts/validate.sh
-bash scripts/publish-termux.sh AetherScape v0.4.0-beta.5
+bash scripts/publish-termux.sh AetherScape v0.5.0-beta.6
 ```
 
 Consulta [docs/TERMUX_GITHUB.md](docs/TERMUX_GITHUB.md) para el procedimiento completo.
@@ -110,3 +110,10 @@ Las condiciones se transforman en valores continuos de nubosidad, lluvia, nieve,
 ## Estado de esta beta
 
 Esta es la primera migración funcional hacia el motor GPU. El objetivo de las siguientes versiones será mejorar las ilustraciones de cada capa, añadir más segmentos artísticos y afinar el consumo de batería en dispositivos reales.
+
+
+## Renderer interactivo v0.5
+
+La vista previa del menú reproduce las mismas capas y el mismo orden visual mediante un compositor Canvas ligero, mientras el fondo aplicado usa el renderer GPU de libGDX. Ambos se animan de forma continua, responden a los ajustes y permiten tocar la escena para activar luces y partículas. La cámara conserva siempre una altura virtual de 1000 unidades: al girar el dispositivo cambia el campo de visión horizontal, no la altura ni la forma de las montañas.
+
+Las capas principales son: cielo, estrellas, cuerpos celestes, nubes lejanas, cuatro planos de montaña, niebla, dos bosques, colina intermedia, objetos traseros, colina frontal, árboles/faroles/fogatas, clima y bloom.

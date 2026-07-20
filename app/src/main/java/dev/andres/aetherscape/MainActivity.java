@@ -147,7 +147,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         titleBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView title = text("AetherScape", 24, TEXT, true);
-        TextView subtitle = text("Live wallpaper climático · beta 0.4", 12, TEXT_SOFT, false);
+        TextView subtitle = text("Live wallpaper climático · beta 0.5", 12, TEXT_SOFT, false);
         titleBox.addView(title);
         titleBox.addView(subtitle);
         header.addView(titleBox, new LinearLayout.LayoutParams(0,
@@ -170,7 +170,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         card.addView(preview, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        TextView hint = text("Vista artística · aplica el fondo para probar el renderer GPU", 11, Color.argb(210, 235, 239, 237), false);
+        TextView hint = text("Vista en vivo · toca el paisaje para activar luces y partículas", 11, Color.argb(210, 235, 239, 237), false);
         hint.setPadding(dp(12), dp(6), dp(12), dp(6));
         hint.setGravity(Gravity.CENTER);
         hint.setBackground(roundRect(Color.argb(95, 9, 15, 24), dp(14), Color.TRANSPARENT, 0));

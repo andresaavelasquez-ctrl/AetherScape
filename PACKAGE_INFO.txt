@@ -1,7 +1,7 @@
-AetherScape v0.4.0-beta.5
+AetherScape v0.5.0-beta.6
 Renderer: libGDX 1.14.2 + OpenGL ES 2.0
 Architecture: Android native UI + AndroidLiveWallpaperService + layered GPU compositor
 Weather: Open-Meteo (no key), Google Weather API, OpenWeatherMap, WeatherAPI.com
 Assets: art-directed transparent PNG layers, emission maps, blur/bloom shader
 Target: Android 8.0+ / SDK 36
-Tag: v0.4.0-beta.5
+Tag: v0.5.0-beta.6

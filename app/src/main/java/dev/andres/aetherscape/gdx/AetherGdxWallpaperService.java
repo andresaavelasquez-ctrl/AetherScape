@@ -1,5 +1,7 @@
 package dev.andres.aetherscape.gdx;
 
+import android.content.SharedPreferences;
+
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.badlogic.gdx.backends.android.AndroidLiveWallpaperService;
 
@@ -12,6 +14,7 @@ public final class AetherGdxWallpaperService extends AndroidLiveWallpaperService
     public void onCreateApplication() {
         AppPreferences.ensureDefaults(this);
         WeatherClient.refreshIfNeeded(this);
+        SharedPreferences preferences = AppPreferences.get(this);
 
         AndroidApplicationConfiguration config = new AndroidApplicationConfiguration();
         config.r = 8;
@@ -21,13 +24,13 @@ public final class AetherGdxWallpaperService extends AndroidLiveWallpaperService
         config.depth = 0;
         config.stencil = 0;
         config.numSamples = 0;
-        config.useAccelerometer = false;
+        config.useAccelerometer = preferences.getBoolean(AppPreferences.PARALLAX, true);
         config.useGyroscope = false;
         config.useCompass = false;
         config.useRotationVectorSensor = false;
         config.useWakelock = false;
         config.disableAudio = true;
-        config.getTouchEventsForLiveWallpaper = false;
+        config.getTouchEventsForLiveWallpaper = true;
         config.useImmersiveMode = false;
         config.useGL30 = false;
         config.renderUnderCutout = true;
