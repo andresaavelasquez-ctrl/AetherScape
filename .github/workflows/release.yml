@@ -36,6 +36,9 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
+      - name: Validate source package
+        run: bash scripts/validate.sh
+
       - name: Build installable beta APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 

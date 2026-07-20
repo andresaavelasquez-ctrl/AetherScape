@@ -1,22 +1,7 @@
-AetherScape 0.1.0-beta.1
-
-Package type: complete Android source project
-Application ID (debug): dev.andres.aetherscape.beta
-Application ID (release): dev.andres.aetherscape
-Minimum Android: 8.0 / API 26
-Target/compile SDK: API 36
-Build stack: Android Gradle Plugin 9.3.0, Gradle 9.5.0, Java 17
-
-Validation completed in this package:
-- Required source/resource files present
-- XML resources parsed successfully
-- GitHub workflow YAML parsed successfully
-- Java source syntax parsed by javac (Android framework symbols require Android SDK)
-
-This environment did not contain the Android SDK, so no APK is bundled.
-The included GitHub Actions workflows build the installable beta APK after push.
-
-Weather providers: Open-Meteo (no key), Google Weather API, OpenWeatherMap, WeatherAPI.com
-
-Renderer: Native Java hardware Canvas, aspect-safe logical world units
-Orientation: portrait and landscape with independent camera proportions
+AetherScape v0.4.0-beta.5
+Renderer: libGDX 1.14.2 + OpenGL ES 2.0
+Architecture: Android native UI + AndroidLiveWallpaperService + layered GPU compositor
+Weather: Open-Meteo (no key), Google Weather API, OpenWeatherMap, WeatherAPI.com
+Assets: art-directed transparent PNG layers, emission maps, blur/bloom shader
+Target: Android 8.0+ / SDK 36
+Tag: v0.4.0-beta.5

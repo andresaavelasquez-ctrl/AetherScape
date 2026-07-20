@@ -1,3 +1,16 @@
+## v0.4.0-beta.5 — GPU Layer Composer
+
+- Migración del live wallpaper desde Canvas a libGDX/OpenGL ES 2.0.
+- Cámara ortográfica en unidades virtuales: vertical y horizontal muestran el mismo mundo sin estirar montañas.
+- Paisaje reconstruido como capas artísticas transparentes independientes.
+- Montañas lejanas, medias, principales y cercanas con perspectiva atmosférica.
+- Bosques, niebla de valle, colinas y objetos del mundo reciclados por segmentos.
+- Bloom real de dos pasadas mediante FrameBuffer y shader gaussiano.
+- Mapas emisivos separados para sol, faroles y fogatas.
+- Lluvia, nieve, tormenta, viento, clima y estaciones conectados al nuevo renderer.
+- Vista previa estática alineada con la nueva dirección visual.
+- Open-Meteo continúa disponible sin clave, junto a los otros proveedores.
+
 ## v0.3.0-beta.4
 
 - Renderer 2D nativo rehecho con unidades lógicas independientes de la resolución.

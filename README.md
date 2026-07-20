@@ -1,45 +1,84 @@
 # AetherScape
 
-![Concept preview](docs/concept-preview.png)
+**AetherScape v0.4.0-beta.5** es una aplicación Android de fondo vivo climático. Esta actualización reemplaza el renderer principal basado en `Canvas` por un compositor acelerado mediante **libGDX 1.14.2 y OpenGL ES 2.0**.
 
-**AetherScape** es una base beta de fondo de pantalla vivo para Android. Genera un paisaje 2D minimalista, cozy y continuo que cambia con la hora, el clima real, el pronóstico cercano y la estación del año.
+![GPU renderer preview](docs/renderer-v3-gpu-preview.png)
 
-## Estado de esta beta
+## Novedades principales
 
-La versión `0.1.0-beta.1` ya contiene una aplicación Android funcional y un `WallpaperService` nativo. No utiliza un vídeo en bucle: dibuja cada cuadro con un motor procedural ligero basado en Canvas.
+- Paisaje dividido en capas PNG transparentes y editables.
+- Cámara ortográfica en unidades virtuales, sin deformar montañas ni árboles al cambiar de orientación.
+- Composición distinta por recorte: vertical muestra una zona más estrecha; horizontal muestra una zona más ancha del mismo mundo.
+- Montañas lejanas, medias, principales y cercanas con profundidad atmosférica.
+- Bosques, niebla de valle, nubes, colinas y objetos semiprocedurales reciclados por segmentos.
+- Bloom de dos pasadas con framebuffers y shader de desenfoque.
+- Mapas emisivos independientes para sol, faroles y fogatas.
+- Lluvia, nieve, viento, niebla, tormentas y estaciones conectados al renderer GPU.
+- Open-Meteo sin clave y proveedores opcionales con clave.
 
-Incluye:
+## Arquitectura
 
-- Vista previa animada dentro de la aplicación.
-- Aplicación directa como live wallpaper.
-- Compatibilidad vertical y horizontal.
-- Amanecer, mañana, mediodía, tarde, atardecer, noche y madrugada.
-- Montañas, colinas, bosques, ruinas, tiendas y fogatas conectados en un recorrido continuo.
-- Estaciones automáticas según fecha y hemisferio.
-- Primavera, verano, otoño e invierno seleccionables manualmente.
-- Cumbres nevadas solo en invierno, con temperaturas bajas o con clima de nieve.
-- Nubes, lluvia, nieve, niebla, viento, tormenta, relámpagos y hojas otoñales.
-- Iluminación ambiental para sol, luna, estrellas, fogatas y luciérnagas.
-- Parallax mediante desplazamiento del launcher y gesto en la vista previa.
-- Ajustes de 15, 30 o 60 FPS y modo de ahorro de batería.
-- Integración beta con Google Weather API.
-- Consulta de condiciones actuales y de las próximas seis horas.
-- GitHub Actions para compilar APK y publicar Releases por tag.
+```text
+MainActivity (Android nativo)
+ ├─ configuración
+ ├─ ubicación
+ ├─ clima
+ └─ vista previa artística
 
-## Requisitos
+AetherGdxWallpaperService
+ └─ AetherGdxApplication
+     └─ LayeredSceneRenderer
+         ├─ cámara ortográfica
+         ├─ capas 2D
+         ├─ segmentos reciclados
+         ├─ framebuffer de escena
+         ├─ framebuffer emisivo
+         ├─ blur horizontal/vertical
+         └─ composición final
+```
+
+El antiguo renderer `Canvas` permanece en el código únicamente como referencia y respaldo de desarrollo; el servicio registrado en el manifiesto utiliza el nuevo renderer GPU.
+
+## Capas incluidas
+
+```text
+app/src/main/assets/aether/
+ ├─ layers/
+ │  ├─ stars.png
+ │  ├─ clouds_far.png
+ │  ├─ clouds_near.png
+ │  ├─ mountains_far.png
+ │  ├─ mountains_mid.png
+ │  ├─ mountains_hero.png
+ │  ├─ mountains_near.png
+ │  ├─ fog_valley.png
+ │  ├─ forest_far.png
+ │  ├─ forest_mid.png
+ │  └─ hill_foreground.png
+ └─ objects/
+    ├─ pine_*.png
+    ├─ lantern.png
+    ├─ lantern_emission.png
+    ├─ campfire.png
+    ├─ campfire_emission.png
+    ├─ glow.png
+    └─ noise_soft.png
+```
+
+El script `tools/generate_visual_assets.py` permite regenerar y mejorar estas capas sin modificar el motor.
+
+## Requisitos de compilación
 
 - Android 8.0 o superior (`minSdk 26`).
-- Java 17 para compilar.
+- Java 17.
 - Android SDK 36 y Build Tools 36.0.0.
 - Gradle 9.5.0.
-- Una clave de Google Weather API para clima real.
+- Conexión a Maven Central durante la primera compilación para descargar libGDX.
 
 ## Compilar
 
-El repositorio no incluye binarios de Gradle. GitHub Actions instala la versión requerida automáticamente.
-
 ```bash
-gradle --no-daemon :app:assembleDebug
+gradle --no-daemon --stacktrace :app:assembleDebug
 ```
 
 APK esperado:
@@ -50,96 +89,24 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## Publicar desde Termux
 
-Consulta [docs/TERMUX_GITHUB.md](docs/TERMUX_GITHUB.md).
-
-Flujo rápido:
-
 ```bash
 bash scripts/validate.sh
-bash scripts/publish-termux.sh AetherScape v0.1.0-beta.1
+bash scripts/publish-termux.sh AetherScape v0.4.0-beta.5
 ```
 
-El tag activa `.github/workflows/release.yml`, compila el APK y crea una prerelease automáticamente.
+Consulta [docs/TERMUX_GITHUB.md](docs/TERMUX_GITHUB.md) para el procedimiento completo.
 
-## Activar el clima real
+## Clima
 
-1. Crea o solicita una clave de Google Weather API.
-2. Instala y abre AetherScape.
-3. Entra en **Clima**.
-4. Pega la clave y pulsa **Guardar clave**.
-5. Concede ubicación o escribe latitud y longitud manualmente.
-6. Pulsa **Actualizar clima ahora**.
+La pestaña **Clima** permite elegir:
 
-La clave se guarda en `SharedPreferences` del dispositivo. Esto sirve para una beta personal. Antes de publicar una versión para muchos usuarios, mueve la llamada meteorológica a un backend/proxy para no distribuir una clave estándar dentro del cliente.
+- Open-Meteo, sin clave.
+- Google Weather API.
+- OpenWeatherMap.
+- WeatherAPI.com.
 
-## Arquitectura
+Las condiciones se transforman en valores continuos de nubosidad, lluvia, nieve, viento, niebla y tormenta. El renderer interpola esos valores para evitar cambios bruscos.
 
-```text
-MainActivity
- ├─ ScenePreviewView
- ├─ Preferencias y controles
- ├─ Permiso/lectura de ubicación
- └─ WeatherClient
+## Estado de esta beta
 
-AetherWallpaperService
- └─ SceneRenderer
-      ├─ Ciclo horario
-      ├─ Clima y pronóstico interpolados
-      ├─ Estación y hemisferio
-      ├─ Generador de segmentos
-      ├─ Parallax
-      ├─ Iluminación
-      └─ Partículas
-```
-
-### Paquetes principales
-
-- `prefs/AppPreferences.java`: claves, valores iniciales y coordenadas.
-- `weather/WeatherClient.java`: Google Weather API y caché local.
-- `render/SceneState.java`: mezcla de hora, clima, pronóstico y estación.
-- `render/SceneRenderer.java`: paisaje procedural y efectos.
-- `wallpaper/AetherWallpaperService.java`: ciclo de renderizado visible/invisible.
-- `ui/ScenePreviewView.java`: vista previa reutilizando el mismo motor.
-
-## Diseño meteorológico
-
-Las condiciones no se cambian como escenas independientes. El motor normaliza valores de `0.0` a `1.0`:
-
-```text
-nubosidad
-lluvia/nieve
-viento
-niebla
-tormenta
-```
-
-Luego interpola gradualmente hacia el nuevo estado. El pronóstico de seis horas se mezcla con menor intensidad para preparar visualmente una lluvia o tormenta futura.
-
-## Limitaciones conocidas de la beta
-
-- El renderizador usa Canvas; una versión posterior podrá migrar a OpenGL ES para más capas y shaders.
-- La ubicación se guarda como última coordenada conocida; no se mantiene un rastreo continuo.
-- La actualización meteorológica se comprueba al abrir la aplicación o cuando el fondo vuelve a ser visible.
-- La clave API se guarda localmente y no debe usarse así en una distribución pública masiva.
-- Los horarios de amanecer y anochecer se aproximan por hora local; una siguiente versión puede usar sunrise/sunset del pronóstico diario.
-- Esta entrega contiene el código fuente y automatización de compilación. El APK se genera en GitHub Actions después del primer push.
-
-## Próxima etapa sugerida
-
-La siguiente beta debería añadir shaders de luz y niebla, transición entre biomas con curvas de densidad, pronóstico diario para amanecer/anochecer reales, fondos de bloqueo independientes y un sistema de paquetes visuales.
-
-
-## Novedades beta 0.3
-
-- Nuevo aspecto visual: montañas más suaves, capas atmosféricas, pinos de encuadre y faroles con glow.
-- Proveedor de clima seleccionable.
-- Open-Meteo integrado como opción sin clave.
-- Compatibilidad adicional con Google Weather API, OpenWeatherMap y WeatherAPI.com.
-
-## Renderer 2D nativo v2
-
-La versión `0.3.0-beta.4` no utiliza JavaScript. El fondo se dibuja de forma nativa con Java y Android Canvas acelerado por hardware. El nuevo renderer calcula todas las proporciones a partir del lado más corto de la pantalla, por lo que una montaña conserva su forma al pasar de vertical a horizontal.
-
-Las capas actuales son: cielo, estrellas, cuerpo celeste, nubes, cuatro planos de montañas, niebla de valle, dos bosques lejanos, tres colinas, árboles del mundo, árboles protagonistas, faroles, estructuras, fogatas, clima y posprocesado atmosférico.
-
-Los elementos del primer plano ya no están fijados a coordenadas de pantalla: pertenecen al mundo procedural y avanzan con su capa de parallax.
+Esta es la primera migración funcional hacia el motor GPU. El objetivo de las siguientes versiones será mejorar las ilustraciones de cada capa, añadir más segmentos artísticos y afinar el consumo de batería en dispositivos reales.

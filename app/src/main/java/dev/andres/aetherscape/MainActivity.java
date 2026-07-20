@@ -42,7 +42,7 @@ import java.util.Locale;
 
 import dev.andres.aetherscape.prefs.AppPreferences;
 import dev.andres.aetherscape.ui.ScenePreviewView;
-import dev.andres.aetherscape.wallpaper.AetherWallpaperService;
+import dev.andres.aetherscape.gdx.AetherGdxWallpaperService;
 import dev.andres.aetherscape.weather.WeatherClient;
 import dev.andres.aetherscape.weather.WeatherSnapshot;
 
@@ -147,7 +147,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         titleBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView title = text("AetherScape", 24, TEXT, true);
-        TextView subtitle = text("Live wallpaper climático · beta 0.3", 12, TEXT_SOFT, false);
+        TextView subtitle = text("Live wallpaper climático · beta 0.4", 12, TEXT_SOFT, false);
         titleBox.addView(title);
         titleBox.addView(subtitle);
         header.addView(titleBox, new LinearLayout.LayoutParams(0,
@@ -170,7 +170,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         card.addView(preview, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        TextView hint = text("Desliza sobre la vista para probar el parallax", 11, Color.argb(210, 235, 239, 237), false);
+        TextView hint = text("Vista artística · aplica el fondo para probar el renderer GPU", 11, Color.argb(210, 235, 239, 237), false);
         hint.setPadding(dp(12), dp(6), dp(12), dp(6));
         hint.setGravity(Gravity.CENTER);
         hint.setBackground(roundRect(Color.argb(95, 9, 15, 24), dp(14), Color.TRANSPARENT, 0));
@@ -443,7 +443,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
 
         LinearLayout info = card();
         info.addView(text("Motor beta", 16, TEXT, true));
-        info.addView(text("• Renderizado nativo con Canvas\n• Pausa por visibilidad del WallpaperService\n• Caché meteorológico local\n• Diseño adaptable vertical y horizontal\n• Sin vídeo pregrabado ni assets pesados",
+        info.addView(text("• Renderer GPU libGDX / OpenGL ES\n• Capas artísticas y mapas emisivos\n• Bloom y niebla por framebuffer\n• Cámara segura para vertical y horizontal\n• Caché meteorológico y clima multiproveedor",
                 12, TEXT_SOFT, false));
         settingsContent.addView(info, cardParams());
 
@@ -461,7 +461,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
     }
 
     private void applyWallpaper() {
-        ComponentName component = new ComponentName(this, AetherWallpaperService.class);
+        ComponentName component = new ComponentName(this, AetherGdxWallpaperService.class);
         try {
             Intent intent = new Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
             intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, component);
@@ -568,9 +568,15 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                 : DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
                         .format(new Date(snapshot.updatedAt));
         String error = preferences.getString(AppPreferences.WEATHER_ERROR, "");
-        String status = (key == null || key.trim().isEmpty())
-                ? (providerRequiresKey(provider) ? "Proveedor configurado · añade una clave" : "Proveedor listo · sin clave requerida")
-                : snapshot.description + " · " + Math.round(snapshot.temperatureC) + " °C";
+        boolean missingRequiredKey = providerRequiresKey(provider) && (key == null || key.trim().isEmpty());
+        String status;
+        if (missingRequiredKey) {
+            status = "Proveedor configurado · añade una clave";
+        } else if (snapshot.updatedAt <= 0L) {
+            status = providerRequiresKey(provider) ? "Proveedor listo" : "Proveedor listo · sin clave requerida";
+        } else {
+            status = snapshot.description + " · " + Math.round(snapshot.temperatureC) + " °C";
+        }
         String detail = "Proveedor: " + providerLabel(provider) + "\nUbicación: " + location + "\nÚltima actualización: " + updated;
         if (error != null && !error.isEmpty()) detail += "\n" + error;
         weatherStatus.setText(status + "\n" + detail);
