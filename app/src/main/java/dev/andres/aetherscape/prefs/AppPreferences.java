@@ -11,7 +11,8 @@ public final class AppPreferences {
     public static final String MANUAL_HOUR = "manual_hour";
     public static final String DYNAMIC_WEATHER = "dynamic_weather";
     public static final String LIVE_LOCATION = "live_location";
-    public static final String API_KEY = "google_weather_api_key";
+    public static final String WEATHER_PROVIDER = "weather_provider";
+    public static final String API_KEY = "weather_api_key";
     public static final String LATITUDE = "latitude";
     public static final String LONGITUDE = "longitude";
     public static final String WEATHER_UPDATE_MIN = "weather_update_min";
@@ -70,6 +71,7 @@ public final class AppPreferences {
                 .putBoolean(LIVE_TIME, true)
                 .putInt(MANUAL_HOUR, 18)
                 .putBoolean(DYNAMIC_WEATHER, true)
+                .putString(WEATHER_PROVIDER, "OPEN_METEO")
                 .putBoolean(LIVE_LOCATION, true)
                 .putInt(WEATHER_UPDATE_MIN, 30)
                 .putString(WEATHER_OVERRIDE, "AUTO")

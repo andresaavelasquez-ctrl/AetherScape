@@ -147,7 +147,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         titleBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView title = text("AetherScape", 24, TEXT, true);
-        TextView subtitle = text("Live wallpaper climático · beta 0.1", 12, TEXT_SOFT, false);
+        TextView subtitle = text("Live wallpaper climático · beta 0.2", 12, TEXT_SOFT, false);
         titleBox.addView(title);
         titleBox.addView(subtitle);
         header.addView(titleBox, new LinearLayout.LayoutParams(0,
@@ -290,11 +290,16 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         settingsContent.addView(statusCard, cardParams());
         updateWeatherStatus();
 
+        addStringSpinner(settingsContent, "Proveedor del clima", "Open-Meteo no necesita clave. Si Google te falla, cambia aquí el servicio.",
+                AppPreferences.WEATHER_PROVIDER,
+                new String[]{"Open-Meteo (sin clave)", "Google Weather API", "OpenWeatherMap", "WeatherAPI.com"},
+                new String[]{"OPEN_METEO", "GOOGLE", "OPENWEATHERMAP", "WEATHERAPI"}, "OPEN_METEO");
+
         LinearLayout apiCard = card();
-        apiCard.addView(text("Google Weather API", 16, TEXT, true));
-        apiCard.addView(text("La clave se guarda localmente en esta beta. No la subas al repositorio ni la escribas en el código.",
+        apiCard.addView(text("Clave del servicio", 16, TEXT, true));
+        apiCard.addView(text("Se guarda solo en este dispositivo. Open-Meteo funciona sin clave; los demás proveedores sí la requieren.",
                 12, TEXT_SOFT, false));
-        EditText keyInput = input("Clave de API", preferences.getString(AppPreferences.API_KEY, ""));
+        EditText keyInput = input("Clave / token", preferences.getString(AppPreferences.API_KEY, ""));
         keyInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         LinearLayout.LayoutParams keyParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
@@ -381,7 +386,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         refreshParams.setMargins(0, dp(4), 0, dp(12));
         settingsContent.addView(refresh, refreshParams);
 
-        TextView attribution = text("Incluye datos meteorológicos de Google · Uso sujeto a las políticas de Google Maps Platform.",
+        TextView attribution = text("Servicios compatibles: Open-Meteo, Google Weather API, OpenWeatherMap y WeatherAPI.com.",
                 11, TEXT_SOFT, false);
         attribution.setGravity(Gravity.CENTER);
         attribution.setPadding(dp(8), dp(8), dp(8), dp(16));
@@ -555,6 +560,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         if (weatherStatus == null) return;
         WeatherSnapshot snapshot = WeatherSnapshot.fromPreferences(preferences);
         String key = preferences.getString(AppPreferences.API_KEY, "");
+        String provider = preferences.getString(AppPreferences.WEATHER_PROVIDER, "OPEN_METEO");
         String location = String.format(Locale.getDefault(), "%.4f, %.4f",
                 AppPreferences.latitude(preferences), AppPreferences.longitude(preferences));
         String updated = snapshot.updatedAt <= 0L
@@ -563,9 +569,9 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                         .format(new Date(snapshot.updatedAt));
         String error = preferences.getString(AppPreferences.WEATHER_ERROR, "");
         String status = (key == null || key.trim().isEmpty())
-                ? "Modo demostración · añade una clave en la pestaña Clima"
+                ? (providerRequiresKey(provider) ? "Proveedor configurado · añade una clave" : "Proveedor listo · sin clave requerida")
                 : snapshot.description + " · " + Math.round(snapshot.temperatureC) + " °C";
-        String detail = "Ubicación: " + location + "\nÚltima actualización: " + updated;
+        String detail = "Proveedor: " + providerLabel(provider) + "\nUbicación: " + location + "\nÚltima actualización: " + updated;
         if (error != null && !error.isEmpty()) detail += "\n" + error;
         weatherStatus.setText(status + "\n" + detail);
     }
@@ -579,10 +585,22 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         if (AppPreferences.WEATHER_UPDATED_AT.equals(key)
                 || AppPreferences.WEATHER_ERROR.equals(key)
                 || AppPreferences.API_KEY.equals(key)
+                || AppPreferences.WEATHER_PROVIDER.equals(key)
                 || AppPreferences.LATITUDE.equals(key)
                 || AppPreferences.LONGITUDE.equals(key)) {
             updateWeatherStatus();
         }
+    }
+
+    private String providerLabel(String provider) {
+        if ("GOOGLE".equals(provider)) return "Google Weather API";
+        if ("OPENWEATHERMAP".equals(provider)) return "OpenWeatherMap";
+        if ("WEATHERAPI".equals(provider)) return "WeatherAPI.com";
+        return "Open-Meteo";
+    }
+
+    private boolean providerRequiresKey(String provider) {
+        return !(provider == null || "OPEN_METEO".equals(provider));
     }
 
     private void addSwitch(LinearLayout parent, String title, String subtitle, String key,

@@ -1,77 +1,65 @@
-# Publicar AetherScape desde Termux
+# Publicar o actualizar AetherScape desde Termux
 
-La compilación pesada se realiza en GitHub Actions. Termux se usa para crear el repositorio, hacer commit, push y crear el tag que dispara la Release.
+El script actualizado funciona tanto si el repositorio todavía no existe como si `AetherScape` ya existe en tu cuenta. Para evitar los errores de permisos del almacenamiento compartido, trabaja dentro de `$HOME` de Termux.
 
 ## 1. Preparar Termux
 
 ```bash
 pkg update
 pkg install git gh unzip
-termux-setup-storage
 gh auth login
 ```
 
-En `gh auth login`, selecciona GitHub.com, HTTPS y acceso mediante navegador.
-
-## 2. Extraer el paquete
-
-Copia `AetherScape-v0.1.0-beta.1-source.zip` a Descargas y ejecuta:
+## 2. Extraer el paquete en el almacenamiento privado de Termux
 
 ```bash
-cd ~/storage/downloads
-unzip AetherScape-v0.1.0-beta.1-source.zip
-cd AetherScape-beta
+cd "$HOME"
+rm -rf AetherScape-release
+mkdir AetherScape-release
+unzip "$HOME/storage/downloads/AetherScape-v0.2.0-beta.2-fixed-source.zip" -d AetherScape-release
+cd "$HOME/AetherScape-release/AetherScape-beta"
 ```
 
-## 3. Configurar la identidad de Git
+Comprueba que estás en la carpeta correcta:
 
 ```bash
-git config --global user.name "Andres Acevedo"
-git config --global user.email "TU_CORREO_DE_GITHUB"
+ls
 ```
 
-## 4. Validar el paquete
+Debes ver `app`, `scripts`, `settings.gradle`, `README.md` y otros archivos. No debe aparecer otra carpeta `AetherScape-beta` dentro.
+
+## 3. Validar
 
 ```bash
 bash scripts/validate.sh
 ```
 
-## 5. Crear repositorio, commit y push
-
-Método automatizado:
+## 4. Publicar la actualización
 
 ```bash
-bash scripts/publish-termux.sh AetherScape v0.1.0-beta.1
+bash scripts/publish-termux.sh AetherScape v0.2.0-beta.2
 ```
 
-Método manual equivalente:
+El script:
+
+- detecta tu usuario de GitHub;
+- comprueba si el repositorio ya existe;
+- si existe, lo clona y reemplaza su contenido por la actualización;
+- si no existe, lo crea;
+- hace commit y push;
+- crea el tag de la beta;
+- activa el workflow de GitHub Actions.
+
+## 5. Revisar la compilación
 
 ```bash
-git init
-git branch -M main
-git add .
-git commit -m "feat: publicar prototipo beta de AetherScape"
-gh repo create AetherScape --public --source=. --remote=origin --push
-```
-
-## 6. Crear la primera Release
-
-```bash
-git tag -a v0.1.0-beta.1 -m "AetherScape beta inicial"
-git push origin v0.1.0-beta.1
-```
-
-El workflow `.github/workflows/release.yml` compila el APK de depuración instalable y lo adjunta automáticamente a una Release marcada como prerelease.
-
-## 7. Revisar la compilación
-
-```bash
-gh run list
-gh run watch
+OWNER="$(gh api user --jq .login)"
+gh run list --repo "$OWNER/AetherScape"
+gh run watch --repo "$OWNER/AetherScape"
 ```
 
 Al terminar, abre la sección **Releases** del repositorio y descarga el APK generado.
 
-## 8. Clave meteorológica
+## Clima
 
-La clave no se escribe en el repositorio. Instala el APK, abre **Clima**, pega la clave de Google Weather API y pulsa **Guardar clave**. Para una versión pública se debe sustituir este mecanismo por un backend/proxy.
+La beta permite seleccionar Open-Meteo sin clave, Google Weather API, OpenWeatherMap o WeatherAPI.com desde la pestaña **Clima**.

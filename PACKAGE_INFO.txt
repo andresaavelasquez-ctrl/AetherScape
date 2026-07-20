@@ -15,3 +15,5 @@ Validation completed in this package:
 
 This environment did not contain the Android SDK, so no APK is bundled.
 The included GitHub Actions workflows build the installable beta APK after push.
+
+Weather providers: Open-Meteo (no key), Google Weather API, OpenWeatherMap, WeatherAPI.com

@@ -1,3 +1,10 @@
+## v0.2.0-beta.2
+
+- Mejora del estilo visual del paisaje para acercarlo a la referencia cozy/aesthetic.
+- Nuevas capas atmosféricas: picos principales, pinos de encuadre y faroles con bloom suave.
+- Selector de proveedor meteorológico.
+- Soporte para Open-Meteo (sin clave), Google Weather API, OpenWeatherMap y WeatherAPI.com.
+
 # Changelog
 
 ## 0.1.0-beta.1

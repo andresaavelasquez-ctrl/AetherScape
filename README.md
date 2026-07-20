@@ -127,3 +127,11 @@ Luego interpola gradualmente hacia el nuevo estado. El pronóstico de seis horas
 ## Próxima etapa sugerida
 
 La siguiente beta debería añadir shaders de luz y niebla, transición entre biomas con curvas de densidad, pronóstico diario para amanecer/anochecer reales, fondos de bloqueo independientes y un sistema de paquetes visuales.
+
+
+## Novedades beta 0.2
+
+- Nuevo aspecto visual: montañas más suaves, capas atmosféricas, pinos de encuadre y faroles con glow.
+- Proveedor de clima seleccionable.
+- Open-Meteo integrado como opción sin clave.
+- Compatibilidad adicional con Google Weather API, OpenWeatherMap y WeatherAPI.com.

@@ -68,6 +68,7 @@ public final class SceneRenderer {
         drawStars(canvas, width, height, palette);
         drawCelestial(canvas, width, height, palette);
         drawClouds(canvas, width, height, palette);
+        drawSignaturePeaks(canvas, width, height, palette);
         drawMountains(canvas, width, height, palette);
         drawDistantFog(canvas, width, height, palette);
         drawGround(canvas, width, height, palette);
@@ -172,6 +173,104 @@ public final class SceneRenderer {
             canvas.drawCircle(x + w * 0.08f, y - h * 0.18f, h * 0.86f, paint);
             canvas.drawCircle(x + w * 0.33f, y + h * 0.04f, h * 0.62f, paint);
         }
+    }
+
+    private void drawSignaturePeaks(Canvas canvas, int width, int height, Palette palette) {
+        float shift = state.parallax ? launcherOffset * width * 0.10f : 0f;
+        float base = height * 0.74f;
+
+        path.reset();
+        path.moveTo(-40f, height);
+        path.lineTo(-40f, base);
+        path.lineTo(width * 0.10f + shift, height * 0.64f);
+        path.lineTo(width * 0.24f + shift, height * 0.72f);
+        path.lineTo(width * 0.43f + shift, height * 0.52f);
+        path.lineTo(width * 0.58f + shift, height * 0.70f);
+        path.lineTo(width * 0.72f + shift, height * 0.62f);
+        path.lineTo(width + 40f, base);
+        path.lineTo(width + 40f, height);
+        path.close();
+        paint.setColor(withAlpha(blend(palette.mountainFar, palette.skyBottom, 0.30f), 180));
+        canvas.drawPath(path, paint);
+
+        path.reset();
+        path.moveTo(-40f, height);
+        path.lineTo(-40f, height * 0.80f);
+        path.lineTo(width * 0.18f + shift, height * 0.71f);
+        path.lineTo(width * 0.34f + shift, height * 0.77f);
+        path.lineTo(width * 0.48f + shift, height * 0.45f);
+        path.lineTo(width * 0.58f + shift, height * 0.66f);
+        path.lineTo(width * 0.74f + shift, height * 0.73f);
+        path.lineTo(width * 0.88f + shift, height * 0.67f);
+        path.lineTo(width + 40f, height * 0.78f);
+        path.lineTo(width + 40f, height);
+        path.close();
+        paint.setColor(withAlpha(blend(palette.mountainMid, palette.skyTop, 0.16f), 220));
+        canvas.drawPath(path, paint);
+
+        float x = width * 0.48f + shift;
+        float peakY = height * 0.45f;
+        path.reset();
+        path.moveTo(x, peakY);
+        path.lineTo(x - width * 0.030f, peakY + height * 0.06f);
+        path.lineTo(x - width * 0.010f, peakY + height * 0.05f);
+        path.lineTo(x, peakY + height * 0.09f);
+        path.lineTo(x + width * 0.013f, peakY + height * 0.055f);
+        path.lineTo(x + width * 0.032f, peakY + height * 0.07f);
+        path.close();
+        paint.setColor(Color.argb((int) ((state.snowCaps ? 160 : 90) * (0.65f + state.effectIntensity * 0.35f)), 228, 232, 234));
+        canvas.drawPath(path, paint);
+    }
+
+    private void drawLanternTrail(Canvas canvas, int width, int height, Palette palette) {
+        float startX = -width * 0.05f;
+        float endX = width * 0.60f;
+        float startY = height * 0.70f;
+        float endY = height * 0.83f;
+        stroke.setColor(Color.argb(115, 88, 63, 61));
+        stroke.setStrokeWidth(Math.max(1.2f, width * 0.0022f));
+        path.reset();
+        path.moveTo(startX, startY);
+        path.quadTo(width * 0.23f, height * 0.76f, endX, endY);
+        canvas.drawPath(path, stroke);
+        for (int i = 0; i < 14; i++) {
+            float t = i / 13f;
+            float x = lerp(startX, endX, t);
+            float y = lerp(startY, endY, t) + (float) Math.sin(t * 4.2f) * height * 0.008f;
+            if (i % 2 == 0) paint.setColor(Color.argb(190, 114, 42, 48));
+            else paint.setColor(Color.argb(170, 54, 49, 71));
+            path.reset();
+            path.moveTo(x, y);
+            path.lineTo(x - width * 0.008f, y + height * 0.010f);
+            path.lineTo(x + width * 0.008f, y + height * 0.010f);
+            path.close();
+            canvas.drawPath(path, paint);
+        }
+        float[] postT = new float[]{0.16f, 0.62f};
+        for (float t : postT) {
+            float x = lerp(startX, endX, t);
+            float y = lerp(startY, endY, t) + (float) Math.sin(t * 4.2f) * height * 0.008f;
+            float top = y - height * 0.12f;
+            paint.setColor(darken(palette.treeNear, 0.60f));
+            canvas.drawRect(x - width * 0.004f, top, x + width * 0.004f, y + height * 0.02f, paint);
+            if (state.showGlow) {
+                for (int g = 3; g >= 1; g--) {
+                    paint.setColor(Color.argb(22 / g + 10, 255, 214, 146));
+                    canvas.drawCircle(x, top + height * 0.020f, width * (0.020f + g * 0.006f), paint);
+                }
+            }
+            paint.setColor(Color.argb(240, 245, 218, 160));
+            rect.set(x - width * 0.010f, top + height * 0.005f, x + width * 0.010f, top + height * 0.040f);
+            canvas.drawRoundRect(rect, width * 0.003f, width * 0.003f, paint);
+        }
+    }
+
+    private void drawFramingPines(Canvas canvas, int width, int height, Palette palette) {
+        int color = darken(palette.treeNear, 0.76f);
+        drawPine(canvas, width * 0.08f, height * 0.83f, 1.85f, state.wind * 3.8f, color, 901);
+        drawPine(canvas, width * 0.20f, height * 0.86f, 1.38f, state.wind * 2.6f, color, 902);
+        drawPine(canvas, width * 0.91f, height * 0.90f, 1.08f, state.wind * 2.1f, color, 903);
+        drawPine(canvas, width * 0.76f, height * 0.96f, 0.92f, state.wind * 1.9f, color, 904);
     }
 
     private void drawMountains(Canvas canvas, int width, int height, Palette palette) {
@@ -295,6 +394,8 @@ public final class SceneRenderer {
                 height * 0.92f, 1f, palette.treeNear, true);
         drawStructures(canvas, width, height, worldOffset + parallax, palette);
         drawCampfires(canvas, width, height, worldOffset + parallax, palette);
+        drawLanternTrail(canvas, width, height, palette);
+        drawFramingPines(canvas, width, height, palette);
     }
 
     private void drawTreeLayer(
@@ -691,11 +792,11 @@ public final class SceneRenderer {
             Keyframe[] frames = new Keyframe[] {
                     new Keyframe(0f,  Color.rgb(16, 21, 42), Color.rgb(43, 43, 69)),
                     new Keyframe(4.5f,Color.rgb(24, 30, 55), Color.rgb(91, 72, 91)),
-                    new Keyframe(6.5f,Color.rgb(103, 104, 139), Color.rgb(230, 161, 134)),
-                    new Keyframe(9f,  Color.rgb(114, 171, 195), Color.rgb(208, 213, 190)),
+                    new Keyframe(6.5f,Color.rgb(94, 102, 144), Color.rgb(236, 168, 144)),
+                    new Keyframe(9f,  Color.rgb(112, 165, 193), Color.rgb(198, 209, 201)),
                     new Keyframe(13f, Color.rgb(92, 169, 205), Color.rgb(210, 218, 202)),
-                    new Keyframe(17f, Color.rgb(111, 146, 169), Color.rgb(222, 182, 145)),
-                    new Keyframe(19.5f,Color.rgb(90, 73, 119), Color.rgb(224, 132, 126)),
+                    new Keyframe(17f, Color.rgb(98, 131, 161), Color.rgb(230, 186, 152)),
+                    new Keyframe(19.5f,Color.rgb(84, 72, 122), Color.rgb(228, 145, 132)),
                     new Keyframe(22f, Color.rgb(29, 31, 57), Color.rgb(65, 52, 78)),
                     new Keyframe(24f, Color.rgb(16, 21, 42), Color.rgb(43, 43, 69))
             };
@@ -734,9 +835,9 @@ public final class SceneRenderer {
             top = darken(top, darkness);
             bottom = darken(bottom, darkness);
 
-            int far = blend(bottom, Color.rgb(72, 79, 96), 0.62f);
-            int mid = blend(far, Color.rgb(40, 49, 66), 0.54f);
-            int near = blend(mid, Color.rgb(24, 33, 47), 0.60f);
+            int far = blend(bottom, Color.rgb(94, 96, 118), 0.57f);
+            int mid = blend(far, Color.rgb(55, 61, 82), 0.48f);
+            int near = blend(mid, Color.rgb(28, 35, 49), 0.54f);
             int hillFar = blend(near, foliage, 0.28f);
             int hillMid = blend(hillFar, Color.rgb(18, 29, 40), 0.50f);
             int ground = blend(hillMid, Color.rgb(10, 19, 29), 0.58f);
