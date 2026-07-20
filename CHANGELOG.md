@@ -1,3 +1,10 @@
+## v0.6.1-beta.8
+
+- Corrige el fallo de GitHub Actions `ModuleNotFoundError: No module named PIL`.
+- La validación de PNG ahora usa únicamente la biblioteca estándar de Python.
+- Verifica firma PNG, IHDR, dimensiones, CRC de chunks e IEND sin instalar Pillow.
+- Mantiene intacto el renderer nativo y la composición de la beta 7.
+
 ## v0.6.0-beta.7 — Native Layer Fix
 
 - Sustituido el servicio libGDX activo por un `WallpaperService` nativo compatible.

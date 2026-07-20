@@ -1,6 +1,8 @@
-AetherScape v0.6.0-beta.7
+AetherScape v0.6.1-beta.8
 Renderer: Android native WallpaperService + hardware Canvas layered compositor
 Architecture: shared LayeredCanvasRenderer for preview and applied wallpaper
 Visual system: curated tree segments, layered mountains, weather, seasons and parallax
 Weather: Open-Meteo, Google Weather API, OpenWeatherMap, WeatherAPI.com
-Tag: v0.6.0-beta.7
+Tag: v0.6.1-beta.8
+
+Validation fix: PNG verification now uses Python standard library only; Pillow is not required.
