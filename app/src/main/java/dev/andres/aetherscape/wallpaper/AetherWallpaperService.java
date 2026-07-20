@@ -77,6 +77,7 @@ public final class AetherWallpaperService extends WallpaperService {
             super.onSurfaceChanged(holder, format, newWidth, newHeight);
             width = newWidth;
             height = newHeight;
+            if (renderer != null) renderer.onSurfaceChanged(newWidth, newHeight);
             surfaceReady = true;
             scheduleNow();
         }
@@ -85,6 +86,7 @@ public final class AetherWallpaperService extends WallpaperService {
         public void onSurfaceCreated(SurfaceHolder holder) {
             super.onSurfaceCreated(holder);
             surfaceReady = true;
+            if (renderer != null && width > 0 && height > 0) renderer.onSurfaceChanged(width, height);
             scheduleNow();
         }
 
@@ -99,6 +101,7 @@ public final class AetherWallpaperService extends WallpaperService {
         public void onOffsetsChanged(float xOffset, float yOffset, float xOffsetStep, float yOffsetStep,
                                      int xPixelOffset, int yPixelOffset) {
             launcherOffset = (xOffset - 0.5f) * 2f;
+            if (visible) scheduleNow();
         }
 
         @Override
@@ -116,7 +119,11 @@ public final class AetherWallpaperService extends WallpaperService {
             Canvas canvas = null;
             SurfaceHolder holder = getSurfaceHolder();
             try {
-                canvas = holder.lockCanvas();
+                try {
+                    canvas = holder.lockHardwareCanvas();
+                } catch (RuntimeException hardwareFailure) {
+                    canvas = holder.lockCanvas();
+                }
                 if (canvas == null || renderer == null) return;
                 int w = width > 0 ? width : canvas.getWidth();
                 int h = height > 0 ? height : canvas.getHeight();

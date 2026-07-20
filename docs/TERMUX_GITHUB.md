@@ -16,7 +16,7 @@ gh auth login
 cd "$HOME"
 rm -rf AetherScape-release
 mkdir AetherScape-release
-unzip "$HOME/storage/downloads/AetherScape-v0.2.0-beta.3-fixed-source.zip" -d AetherScape-release
+unzip "$HOME/storage/downloads/AetherScape-v0.3.0-beta.4-fixed-source.zip" -d AetherScape-release
 cd "$HOME/AetherScape-release/AetherScape-beta"
 ```
 
@@ -37,7 +37,7 @@ bash scripts/validate.sh
 ## 4. Publicar la actualización
 
 ```bash
-bash scripts/publish-termux.sh AetherScape v0.2.0-beta.3
+bash scripts/publish-termux.sh AetherScape v0.3.0-beta.4
 ```
 
 El script:

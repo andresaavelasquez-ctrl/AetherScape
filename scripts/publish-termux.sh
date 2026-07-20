@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_NAME="${1:-AetherScape}"
-TAG="${2:-v0.2.0-beta.3}"
+TAG="${2:-v0.3.0-beta.4}"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PROJECT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 WORK_DIR="$HOME/.cache/aetherscape-publish-$REPO_NAME"

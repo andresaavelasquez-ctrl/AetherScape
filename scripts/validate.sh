@@ -22,4 +22,10 @@ grep -q 'compileSdk 36' app/build.gradle
 grep -q 'versionName' app/build.gradle
 grep -q 'private static float lerp' app/src/main/java/dev/andres/aetherscape/render/SceneRenderer.java
 
-echo "AetherScape source package looks complete."
+grep -q "versionName '0.3.0-beta.4'" app/build.gradle
+grep -q 'lockHardwareCanvas' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
+grep -q 'Logical world units' app/src/main/java/dev/andres/aetherscape/render/SceneRenderer.java
+grep -q 'drawHeroTrees' app/src/main/java/dev/andres/aetherscape/render/SceneRenderer.java
+! grep -q 'drawFramingPines' app/src/main/java/dev/andres/aetherscape/render/SceneRenderer.java
+
+echo "AetherScape v0.3 renderer package looks complete."

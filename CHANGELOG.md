@@ -1,3 +1,16 @@
+## v0.3.0-beta.4
+
+- Renderer 2D nativo rehecho con unidades lógicas independientes de la resolución.
+- Corrección de proporciones en modo vertical y horizontal: las montañas ya no usan la altura completa como escala.
+- Eliminación de árboles decorativos fijos que parecían estampados sobre la pantalla.
+- Todos los árboles grandes, faroles, estructuras y fogatas quedan anclados al mundo desplazable.
+- Nuevo borrado completo del búfer para evitar rastros o píxeles fantasma entre fotogramas.
+- Canvas acelerado por hardware con respaldo automático al Canvas convencional.
+- Montañas más anchas, con hombros, facetas, niebla de valle y cumbres condicionales.
+- Pinos más detallados y asimétricos, con tamaños separados para paisaje y retrato.
+- Bloom mediante gradientes radiales para sol, luna, faroles y fogatas.
+- Mejor adaptación del parallax y de la cámara tras cambios de orientación.
+
 ## v0.2.0-beta.3
 
 - Corrección de compilación: se añadió la interpolación faltante usada por la ruta de faroles.

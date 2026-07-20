@@ -44,6 +44,13 @@ public final class ScenePreviewView extends View implements SharedPreferences.On
         super.onDetachedFromWindow();
     }
 
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        renderer.onSurfaceChanged(w, h);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);

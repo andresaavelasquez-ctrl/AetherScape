@@ -129,9 +129,17 @@ Luego interpola gradualmente hacia el nuevo estado. El pronóstico de seis horas
 La siguiente beta debería añadir shaders de luz y niebla, transición entre biomas con curvas de densidad, pronóstico diario para amanecer/anochecer reales, fondos de bloqueo independientes y un sistema de paquetes visuales.
 
 
-## Novedades beta 0.2
+## Novedades beta 0.3
 
 - Nuevo aspecto visual: montañas más suaves, capas atmosféricas, pinos de encuadre y faroles con glow.
 - Proveedor de clima seleccionable.
 - Open-Meteo integrado como opción sin clave.
 - Compatibilidad adicional con Google Weather API, OpenWeatherMap y WeatherAPI.com.
+
+## Renderer 2D nativo v2
+
+La versión `0.3.0-beta.4` no utiliza JavaScript. El fondo se dibuja de forma nativa con Java y Android Canvas acelerado por hardware. El nuevo renderer calcula todas las proporciones a partir del lado más corto de la pantalla, por lo que una montaña conserva su forma al pasar de vertical a horizontal.
+
+Las capas actuales son: cielo, estrellas, cuerpo celeste, nubes, cuatro planos de montañas, niebla de valle, dos bosques lejanos, tres colinas, árboles del mundo, árboles protagonistas, faroles, estructuras, fogatas, clima y posprocesado atmosférico.
+
+Los elementos del primer plano ya no están fijados a coordenadas de pantalla: pertenecen al mundo procedural y avanzan con su capa de parallax.
