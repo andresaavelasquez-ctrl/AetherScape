@@ -2,53 +2,72 @@ package dev.andres.aetherscape.wallpaper;
 
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
+import android.graphics.PixelFormat;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.service.wallpaper.WallpaperService;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 
 import dev.andres.aetherscape.prefs.AppPreferences;
-import dev.andres.aetherscape.render.SceneRenderer;
+import dev.andres.aetherscape.render.LayeredCanvasRenderer;
 import dev.andres.aetherscape.weather.WeatherClient;
 
-/** Native live wallpaper service with adaptive FPS and visibility-aware rendering. */
-public final class AetherWallpaperService extends WallpaperService {
+/**
+ * Compatibility-first live wallpaper engine.
+ *
+ * This service renders directly into Android's WallpaperService surface and
+ * does not depend on a secondary OpenGL lifecycle. It fixes the black screen
+ * reported after applying the previous GPU build while keeping the layered,
+ * animated visual system.
+ */
+public class AetherWallpaperService extends WallpaperService {
     @Override
     public Engine onCreateEngine() {
         return new AetherEngine();
     }
 
-    private final class AetherEngine extends Engine implements SharedPreferences.OnSharedPreferenceChangeListener {
-        private final HandlerThread renderThread = new HandlerThread("AetherWallpaperRenderer");
+    private final class AetherEngine extends Engine
+            implements SharedPreferences.OnSharedPreferenceChangeListener {
+        private final HandlerThread renderThread = new HandlerThread("AetherNativeLayerEngine");
         private Handler renderHandler;
         private SharedPreferences preferences;
-        private SceneRenderer renderer;
+        private LayeredCanvasRenderer renderer;
         private volatile boolean visible;
         private volatile boolean surfaceReady;
-        private volatile float launcherOffset;
-        private int width;
-        private int height;
+        private int width = 1;
+        private int height = 1;
+        private long lastFrameNanos;
 
         private final Runnable frame = new Runnable() {
             @Override
             public void run() {
-                if (!visible || !surfaceReady || renderHandler == null) return;
+                if (!surfaceReady || renderHandler == null) return;
                 drawFrame();
-                int fps = renderer == null ? 30 : renderer.currentTargetFps();
-                renderHandler.postDelayed(this, Math.max(16L, 1000L / Math.max(10, fps)));
+                if (visible && surfaceReady) {
+                    int fps = renderer == null ? 30 : renderer.targetFps();
+                    renderHandler.postDelayed(this, Math.max(16L, 1000L / Math.max(15, fps)));
+                }
             }
         };
 
         @Override
         public void onCreate(SurfaceHolder surfaceHolder) {
             super.onCreate(surfaceHolder);
+            surfaceHolder.setFormat(PixelFormat.RGBA_8888);
+            setTouchEventsEnabled(true);
+            setOffsetNotificationsEnabled(true);
+
             AppPreferences.ensureDefaults(AetherWallpaperService.this);
             preferences = AppPreferences.get(AetherWallpaperService.this);
-            renderer = new SceneRenderer(preferences);
             preferences.registerOnSharedPreferenceChangeListener(this);
+            renderer = new LayeredCanvasRenderer(
+                    AetherWallpaperService.this.getApplicationContext(), preferences);
+            renderer.setPreview(false);
+
             renderThread.start();
             renderHandler = new Handler(renderThread.getLooper());
-            setTouchEventsEnabled(false);
         }
 
         @Override
@@ -57,6 +76,8 @@ public final class AetherWallpaperService extends WallpaperService {
             surfaceReady = false;
             if (renderHandler != null) renderHandler.removeCallbacksAndMessages(null);
             if (preferences != null) preferences.unregisterOnSharedPreferenceChangeListener(this);
+            if (renderer != null) renderer.dispose();
+            renderer = null;
             renderThread.quitSafely();
             super.onDestroy();
         }
@@ -66,28 +87,36 @@ public final class AetherWallpaperService extends WallpaperService {
             visible = isVisible;
             if (isVisible) {
                 WeatherClient.refreshIfNeeded(AetherWallpaperService.this);
-                scheduleNow();
+                schedule(true);
             } else if (renderHandler != null) {
                 renderHandler.removeCallbacks(frame);
             }
         }
 
         @Override
-        public void onSurfaceChanged(SurfaceHolder holder, int format, int newWidth, int newHeight) {
-            super.onSurfaceChanged(holder, format, newWidth, newHeight);
-            width = newWidth;
-            height = newHeight;
-            if (renderer != null) renderer.onSurfaceChanged(newWidth, newHeight);
-            surfaceReady = true;
-            scheduleNow();
-        }
-
-        @Override
         public void onSurfaceCreated(SurfaceHolder holder) {
             super.onSurfaceCreated(holder);
             surfaceReady = true;
-            if (renderer != null && width > 0 && height > 0) renderer.onSurfaceChanged(width, height);
-            scheduleNow();
+            lastFrameNanos = 0L;
+            // Draw once even before the launcher reports visibility. This avoids
+            // Android displaying a black placeholder during wallpaper switching.
+            schedule(true);
+        }
+
+        @Override
+        public void onSurfaceChanged(SurfaceHolder holder, int format, int newWidth, int newHeight) {
+            super.onSurfaceChanged(holder, format, newWidth, newHeight);
+            width = Math.max(1, newWidth);
+            height = Math.max(1, newHeight);
+            surfaceReady = true;
+            lastFrameNanos = 0L;
+            schedule(true);
+        }
+
+        @Override
+        public void onSurfaceRedrawNeeded(SurfaceHolder holder) {
+            super.onSurfaceRedrawNeeded(holder);
+            schedule(true);
         }
 
         @Override
@@ -98,45 +127,89 @@ public final class AetherWallpaperService extends WallpaperService {
         }
 
         @Override
-        public void onOffsetsChanged(float xOffset, float yOffset, float xOffsetStep, float yOffsetStep,
-                                     int xPixelOffset, int yPixelOffset) {
-            launcherOffset = (xOffset - 0.5f) * 2f;
-            if (visible) scheduleNow();
+        public void onOffsetsChanged(float xOffset, float yOffset, float xOffsetStep,
+                                     float yOffsetStep, int xPixelOffset, int yPixelOffset) {
+            if (renderer != null) renderer.setLauncherOffset((xOffset - 0.5f) * 2f);
+            schedule(false);
+        }
+
+        @Override
+        public void onTouchEvent(MotionEvent event) {
+            if (renderer != null && (event.getActionMasked() == MotionEvent.ACTION_DOWN
+                    || event.getActionMasked() == MotionEvent.ACTION_MOVE)) {
+                renderer.touch(event.getX() / Math.max(1f, width),
+                        event.getY() / Math.max(1f, height));
+                schedule(false);
+            } else if (renderer != null && (event.getActionMasked() == MotionEvent.ACTION_UP
+                    || event.getActionMasked() == MotionEvent.ACTION_CANCEL)) {
+                renderer.releaseTouch();
+            }
+            super.onTouchEvent(event);
+        }
+
+        @Override
+        public Bundle onCommand(String action, int x, int y, int z, Bundle extras,
+                                boolean resultRequested) {
+            if (renderer != null && ("android.wallpaper.tap".equals(action)
+                    || "android.wallpaper.secondaryTap".equals(action)
+                    || "android.home.drop".equals(action))) {
+                renderer.touch(x / Math.max(1f, width), y / Math.max(1f, height));
+                renderer.pulseLights();
+                schedule(false);
+            }
+            return super.onCommand(action, x, y, z, extras, resultRequested);
         }
 
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            if (visible) scheduleNow();
+            if (renderer != null) renderer.reloadPreferences();
+            schedule(false);
         }
 
-        private void scheduleNow() {
-            if (renderHandler == null || !visible || !surfaceReady) return;
+        private void schedule(boolean forceOneFrame) {
+            if (renderHandler == null || !surfaceReady) return;
             renderHandler.removeCallbacks(frame);
-            renderHandler.post(frame);
+            if (forceOneFrame || visible) renderHandler.post(frame);
         }
 
         private void drawFrame() {
-            Canvas canvas = null;
             SurfaceHolder holder = getSurfaceHolder();
+            Canvas canvas = null;
             try {
                 try {
                     canvas = holder.lockHardwareCanvas();
-                } catch (RuntimeException hardwareFailure) {
+                } catch (Throwable hardwareFailure) {
                     canvas = holder.lockCanvas();
                 }
-                if (canvas == null || renderer == null) return;
-                int w = width > 0 ? width : canvas.getWidth();
-                int h = height > 0 ? height : canvas.getHeight();
-                renderer.setLauncherOffset(launcherOffset);
-                renderer.draw(canvas, w, h, preferences, false);
-            } catch (RuntimeException ignored) {
-                // Surface can disappear between visibility and lockCanvas callbacks.
+                if (canvas == null) return;
+                int actualWidth = width > 1 ? width : canvas.getWidth();
+                int actualHeight = height > 1 ? height : canvas.getHeight();
+                long now = System.nanoTime();
+                float dt = lastFrameNanos == 0L
+                        ? 1f / 30f
+                        : (now - lastFrameNanos) / 1_000_000_000f;
+                lastFrameNanos = now;
+                if (renderer != null) {
+                    renderer.draw(canvas, actualWidth, actualHeight, dt);
+                } else {
+                    canvas.drawColor(android.graphics.Color.rgb(9, 13, 26));
+                }
+            } catch (Throwable renderingFailure) {
+                if (canvas != null && renderer != null) {
+                    try {
+                        renderer.drawEmergencyFrame(canvas,
+                                width > 1 ? width : canvas.getWidth(),
+                                height > 1 ? height : canvas.getHeight());
+                    } catch (Throwable ignored) {
+                        canvas.drawColor(android.graphics.Color.rgb(9, 13, 26));
+                    }
+                }
             } finally {
                 if (canvas != null) {
                     try {
                         holder.unlockCanvasAndPost(canvas);
-                    } catch (RuntimeException ignored) {
-                        // The surface was destroyed while posting.
+                    } catch (Throwable ignored) {
+                        // Surface was replaced while the frame was being posted.
                     }
                 }
             }

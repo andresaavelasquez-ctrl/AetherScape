@@ -340,6 +340,68 @@ for y in range(256):
 noise = noise.filter(ImageFilter.GaussianBlur(2.5))
 noise.save(OBJ / "noise_soft.png", optimize=True)
 
+
+# v0.6 composition pass: broad ridges and grouped forests with a central vista.
+def v06_grouped_forest(name, ground, color, alpha, back=False):
+    image = transparent()
+    draw = ImageDraw.Draw(image, "RGBA")
+    rnd = random.Random(6800 if back else 6801)
+    clusters = [(0, 430), (480, 820), (1580, 1920), (1970, 2390)]
+    for cluster_index, (start_x, end_x) in enumerate(clusters):
+        spacing = 48 if back else 66
+        x = start_x + rnd.randint(0, 30)
+        while x < end_x:
+            h = rnd.randint(72, 142) if back else rnd.randint(105, 205)
+            w = h * rnd.uniform(.20, .28)
+            draw_pine(draw, x, ground + rnd.randint(-8, 8), h, w, color, alpha,
+                      sparse=rnd.random() < .22, dead=rnd.random() < .05,
+                      seed=6900 + cluster_index * 100 + int(x))
+            x += spacing + rnd.randint(-14, 18)
+    save_layer(image, name)
+
+
+def v06_near_ridge():
+    image = transparent()
+    draw = ImageDraw.Draw(image, "RGBA")
+    points = [(0, 835), (150, 782), (340, 830), (560, 750), (760, 828),
+              (980, 770), (1180, 842), (1370, 790), (1570, 850),
+              (1770, 760), (1960, 832), (2160, 785), (2400, 838)]
+    poly = points + [(2400, 1000), (0, 1000)]
+    draw.polygon(pts(poly), fill=(43, 42, 61, 245))
+    # Soft facets, never tall needle peaks.
+    for i in range(len(points) - 2):
+        x, y = points[i + 1]
+        left = points[i]
+        right = points[i + 2]
+        draw.polygon(pts([(x, y), (left[0], left[1]), (x, 1000)]),
+                     fill=(92, 76, 96, 62))
+        draw.polygon(pts([(x, y), (right[0], right[1]), (x, 1000)]),
+                     fill=(20, 23, 38, 72))
+    save_layer(image, "mountains_near.png")
+
+
+def v06_terrain(name, front=False):
+    image = transparent()
+    draw = ImageDraw.Draw(image, "RGBA")
+    def f(x):
+        local = (x % W) / W * math.tau
+        if front:
+            return 82 + math.sin(local + 1.02) * 22 + math.sin(local * 2 + .22) * 9
+        return 202 + math.sin(local + .32) * 30 + math.sin(local * 2 + 1.15) * 14
+    boundary = [(x, H - f(x)) for x in range(0, W + 1, 10)]
+    color = (8, 15, 28, 255) if front else (28, 31, 48, 255)
+    draw.polygon(pts(boundary + [(W, H), (0, H)]), fill=color)
+    if not front:
+        echo = [(x, H - f(x) + 30 + math.sin(x * .008) * 5) for x in range(0, W + 1, 10)]
+        draw.polygon(pts(echo + [(W, H), (0, H)]), fill=(54, 50, 68, 95))
+    save_layer(image, name)
+
+v06_grouped_forest("forest_far.png", 842, (51, 50, 70), 120, back=True)
+v06_grouped_forest("forest_mid.png", 910, (28, 31, 49), 200, back=False)
+v06_near_ridge()
+v06_terrain("hill_mid.png", front=False)
+v06_terrain("hill_front.png", front=True)
+
 # Compose previews using the exact new layer order.
 def make_preview(width, height, landscape=False):
     output = Image.new("RGBA", (width, height), (0, 0, 0, 255))
@@ -418,4 +480,4 @@ portrait.save(DOCS / "renderer-v4-interactive-preview.png", quality=94)
 portrait.resize((540, 960), Image.Resampling.LANCZOS).save(RES / "wallpaper_thumb.png", optimize=True)
 landscape = make_preview(1920, 1080, True)
 landscape.save(DOCS / "renderer-v4-interactive-preview-landscape.png", quality=94)
-print("Generated AetherScape v0.5 visual assets")
+print("Generated AetherScape v0.6 visual assets")

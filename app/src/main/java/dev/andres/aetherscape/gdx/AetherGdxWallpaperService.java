@@ -1,40 +1,13 @@
 package dev.andres.aetherscape.gdx;
 
-import android.content.SharedPreferences;
+import dev.andres.aetherscape.wallpaper.AetherWallpaperService;
 
-import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
-import com.badlogic.gdx.backends.android.AndroidLiveWallpaperService;
-
-import dev.andres.aetherscape.prefs.AppPreferences;
-import dev.andres.aetherscape.weather.WeatherClient;
-
-/** GPU-backed live wallpaper entry point. */
-public final class AetherGdxWallpaperService extends AndroidLiveWallpaperService {
-    @Override
-    public void onCreateApplication() {
-        AppPreferences.ensureDefaults(this);
-        WeatherClient.refreshIfNeeded(this);
-        SharedPreferences preferences = AppPreferences.get(this);
-
-        AndroidApplicationConfiguration config = new AndroidApplicationConfiguration();
-        config.r = 8;
-        config.g = 8;
-        config.b = 8;
-        config.a = 8;
-        config.depth = 0;
-        config.stencil = 0;
-        config.numSamples = 0;
-        config.useAccelerometer = preferences.getBoolean(AppPreferences.PARALLAX, true);
-        config.useGyroscope = false;
-        config.useCompass = false;
-        config.useRotationVectorSensor = false;
-        config.useWakelock = false;
-        config.disableAudio = true;
-        config.getTouchEventsForLiveWallpaper = true;
-        config.useImmersiveMode = false;
-        config.useGL30 = false;
-        config.renderUnderCutout = true;
-
-        initialize(new AetherGdxApplication(getApplicationContext()), config);
-    }
+/**
+ * Migration alias for users upgrading from v0.5.
+ *
+ * The previous release registered this component name. Keeping it declared
+ * lets Android reconnect an already-selected wallpaper after updating the APK,
+ * but the implementation now uses the stable native layered engine.
+ */
+public final class AetherGdxWallpaperService extends AetherWallpaperService {
 }

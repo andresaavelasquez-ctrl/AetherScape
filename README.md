@@ -1,119 +1,78 @@
 # AetherScape
 
-**AetherScape v0.5.0-beta.6** es una aplicación Android de fondo vivo climático. Esta actualización reemplaza el renderer principal basado en `Canvas` por un compositor acelerado mediante **libGDX 1.14.2 y OpenGL ES 2.0**.
+**AetherScape v0.6.0-beta.7** es una aplicación Android de fondo vivo climático con paisaje 2D por capas, transiciones horarias, estaciones y varios proveedores meteorológicos.
 
-![GPU renderer preview](docs/renderer-v3-gpu-preview.png)
+![Vista vertical](docs/renderer-v5-native-preview.png)
 
-## Novedades principales
+## Cambio principal de esta versión
 
-- Paisaje dividido en capas PNG transparentes y editables.
-- Cámara ortográfica en unidades virtuales, sin deformar montañas ni árboles al cambiar de orientación.
-- Composición distinta por recorte: vertical muestra una zona más estrecha; horizontal muestra una zona más ancha del mismo mundo.
-- Montañas lejanas, medias, principales y cercanas con profundidad atmosférica.
-- Bosques, niebla de valle, nubes, colinas y objetos semiprocedurales reciclados por segmentos.
-- Bloom de dos pasadas con framebuffers y shader de desenfoque.
-- Mapas emisivos independientes para sol, faroles y fogatas.
-- Lluvia, nieve, viento, niebla, tormentas y estaciones conectados al renderer GPU.
-- Open-Meteo sin clave y proveedores opcionales con clave.
+La beta anterior renderizaba el fondo aplicado mediante un servicio libGDX/OpenGL separado de la vista previa. En algunos dispositivos el selector aceptaba el fondo, pero el servicio gráfico quedaba negro.
 
-## Arquitectura
+Esta versión usa un único motor nativo compartido:
 
 ```text
-MainActivity (Android nativo)
- ├─ configuración
- ├─ ubicación
- ├─ clima
- └─ vista previa artística
-
-AetherGdxWallpaperService
- └─ AetherGdxApplication
-     └─ LayeredSceneRenderer
-         ├─ cámara ortográfica
-         ├─ capas 2D
-         ├─ segmentos reciclados
-         ├─ framebuffer de escena
-         ├─ framebuffer emisivo
-         ├─ blur horizontal/vertical
-         └─ composición final
+MainActivity / vista previa
+          └── LayeredCanvasRenderer
+WallpaperService / pantalla de inicio
+          └── LayeredCanvasRenderer
 ```
 
-El antiguo renderer `Canvas` permanece en el código únicamente como referencia y respaldo de desarrollo; el servicio registrado en el manifiesto utiliza el nuevo renderer GPU.
+El servicio dibuja directamente sobre la superficie oficial de `WallpaperService`, usando `lockHardwareCanvas()` cuando el dispositivo lo permite y `lockCanvas()` como respaldo.
 
-## Capas incluidas
+## Mejoras visuales
 
-```text
-app/src/main/assets/aether/
- ├─ layers/
- │  ├─ stars.png
- │  ├─ clouds_far.png
- │  ├─ clouds_near.png
- │  ├─ mountains_far.png
- │  ├─ mountains_mid.png
- │  ├─ mountains_hero.png
- │  ├─ mountains_near.png
- │  ├─ fog_valley.png
- │  ├─ forest_far.png
- │  ├─ forest_mid.png
- │  └─ hill_foreground.png
- └─ objects/
-    ├─ pine_*.png
-    ├─ lantern.png
-    ├─ lantern_emission.png
-    ├─ campfire.png
-    ├─ campfire_emission.png
-    ├─ glow.png
-    └─ noise_soft.png
-```
+- Árboles distribuidos mediante plantillas de escena, no aleatoriamente por toda la pantalla.
+- Grupos de bosque en los bordes y una zona central libre para la montaña principal.
+- Cinco tipos de segmento: vista abierta, entrada de bosque, sendero con faroles, claro y cresta dispersa.
+- Montañas cercanas más anchas y menos puntiagudas.
+- Bosques lejanos agrupados con claros visibles.
+- Misma altura lógica de `1000` unidades en vertical y horizontal.
+- Sol, luna, faroles y fogatas con iluminación radial suave.
+- Niebla, lluvia, nieve, viento, estrellas y luciérnagas animados.
+- Colores estacionales aplicados a bosques y montañas.
 
-El script `tools/generate_visual_assets.py` permite regenerar y mejorar estas capas sin modificar el motor.
+## Correcciones del fondo aplicado
 
-## Requisitos de compilación
-
-- Android 8.0 o superior (`minSdk 26`).
-- Java 17.
-- Android SDK 36 y Build Tools 36.0.0.
-- Gradle 9.5.0.
-- Conexión a Maven Central durante la primera compilación para descargar libGDX.
-
-## Compilar
-
-```bash
-gradle --no-daemon --stacktrace :app:assembleDebug
-```
-
-APK esperado:
-
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
-
-## Publicar desde Termux
-
-```bash
-bash scripts/validate.sh
-bash scripts/publish-termux.sh AetherScape v0.5.0-beta.6
-```
-
-Consulta [docs/TERMUX_GITHUB.md](docs/TERMUX_GITHUB.md) para el procedimiento completo.
+- El componente que abre Android ahora es `AetherWallpaperService`.
+- Se conserva un alias de migración para el componente de la beta 0.5, evitando que una actualización deje el fondo anterior sin servicio.
+- El manifiesto registra el mismo servicio que usa el botón **Aplicar como fondo de pantalla**.
+- Se dibuja un primer fotograma al crear la superficie, incluso antes de que el launcher marque el fondo como visible.
+- Si el Canvas acelerado no está disponible, se utiliza Canvas convencional.
+- Si una capa falla, se dibuja una escena de emergencia en lugar de dejar la pantalla negra.
+- Toques, desplazamiento del launcher y cambios de ajustes fuerzan un nuevo fotograma.
 
 ## Clima
 
-La pestaña **Clima** permite elegir:
+Proveedores compatibles:
 
 - Open-Meteo, sin clave.
 - Google Weather API.
 - OpenWeatherMap.
 - WeatherAPI.com.
 
-Las condiciones se transforman en valores continuos de nubosidad, lluvia, nieve, viento, niebla y tormenta. El renderer interpola esos valores para evitar cambios bruscos.
+## Compilar y publicar desde Termux
 
-## Estado de esta beta
+```bash
+cd "$HOME"
+rm -rf "$HOME/AetherScape-release"
+mkdir -p "$HOME/AetherScape-release"
 
-Esta es la primera migración funcional hacia el motor GPU. El objetivo de las siguientes versiones será mejorar las ilustraciones de cada capa, añadir más segmentos artísticos y afinar el consumo de batería en dispositivos reales.
+unzip -o \
+  "$HOME/storage/downloads/AetherScape-v0.6.0-beta.7-native-layer-fix-source.zip" \
+  -d "$HOME/AetherScape-release"
 
+cd "$HOME/AetherScape-release/AetherScape-beta"
+bash scripts/validate.sh
+bash scripts/publish-termux.sh AetherScape v0.6.0-beta.7
+```
 
-## Renderer interactivo v0.5
+Para vigilar GitHub Actions:
 
-La vista previa del menú reproduce las mismas capas y el mismo orden visual mediante un compositor Canvas ligero, mientras el fondo aplicado usa el renderer GPU de libGDX. Ambos se animan de forma continua, responden a los ajustes y permiten tocar la escena para activar luces y partículas. La cámara conserva siempre una altura virtual de 1000 unidades: al girar el dispositivo cambia el campo de visión horizontal, no la altura ni la forma de las montañas.
+```bash
+OWNER="$(gh api user --jq .login)"
+gh run list --repo "$OWNER/AetherScape" --limit 5
+```
 
-Las capas principales son: cielo, estrellas, cuerpos celestes, nubes lejanas, cuatro planos de montaña, niebla, dos bosques, colina intermedia, objetos traseros, colina frontal, árboles/faroles/fogatas, clima y bloom.
+## Estado beta
+
+La estructura, XML, recursos PNG y scripts se validan localmente. La compilación Android completa se ejecuta en GitHub Actions.

@@ -1,65 +1,31 @@
-# Publicar o actualizar AetherScape desde Termux
-
-El script actualizado funciona tanto si el repositorio todavía no existe como si `AetherScape` ya existe en tu cuenta. Para evitar los errores de permisos del almacenamiento compartido, trabaja dentro de `$HOME` de Termux.
-
-## 1. Preparar Termux
+# Publicar AetherScape desde Termux
 
 ```bash
 pkg update
-pkg install git gh unzip
+pkg install git gh unzip tar
+termux-setup-storage
 gh auth login
 ```
 
-## 2. Extraer el paquete en el almacenamiento privado de Termux
+Extrae el proyecto dentro del almacenamiento privado de Termux:
 
 ```bash
 cd "$HOME"
-rm -rf AetherScape-release
-mkdir AetherScape-release
-unzip "$HOME/storage/downloads/AetherScape-v0.4.0-beta.5-gpu-layer-source.zip" -d AetherScape-release
+rm -rf "$HOME/AetherScape-release"
+mkdir -p "$HOME/AetherScape-release"
+
+unzip -o \
+  "$HOME/storage/downloads/AetherScape-v0.6.0-beta.7-native-layer-fix-source.zip" \
+  -d "$HOME/AetherScape-release"
+
 cd "$HOME/AetherScape-release/AetherScape-beta"
-```
-
-Comprueba que estás en la carpeta correcta:
-
-```bash
-ls
-```
-
-Debes ver `app`, `scripts`, `settings.gradle`, `README.md` y otros archivos. No debe aparecer otra carpeta `AetherScape-beta` dentro.
-
-## 3. Validar
-
-```bash
 bash scripts/validate.sh
+bash scripts/publish-termux.sh AetherScape v0.6.0-beta.7
 ```
 
-## 4. Publicar la actualización
-
-```bash
-bash scripts/publish-termux.sh AetherScape v0.4.0-beta.5
-```
-
-El script:
-
-- detecta tu usuario de GitHub;
-- comprueba si el repositorio ya existe;
-- si existe, lo clona y reemplaza su contenido por la actualización;
-- si no existe, lo crea;
-- hace commit y push;
-- crea el tag de la beta;
-- activa el workflow de GitHub Actions.
-
-## 5. Revisar la compilación
+Comprobar la compilación:
 
 ```bash
 OWNER="$(gh api user --jq .login)"
-gh run list --repo "$OWNER/AetherScape"
-gh run watch --repo "$OWNER/AetherScape"
+gh run list --repo "$OWNER/AetherScape" --limit 5
 ```
-
-Al terminar, abre la sección **Releases** del repositorio y descarga el APK generado.
-
-## Clima
-
-La beta permite seleccionar Open-Meteo sin clave, Google Weather API, OpenWeatherMap o WeatherAPI.com desde la pestaña **Clima**.

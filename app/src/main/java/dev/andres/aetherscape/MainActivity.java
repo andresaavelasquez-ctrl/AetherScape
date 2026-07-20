@@ -42,7 +42,7 @@ import java.util.Locale;
 
 import dev.andres.aetherscape.prefs.AppPreferences;
 import dev.andres.aetherscape.ui.ScenePreviewView;
-import dev.andres.aetherscape.gdx.AetherGdxWallpaperService;
+import dev.andres.aetherscape.wallpaper.AetherWallpaperService;
 import dev.andres.aetherscape.weather.WeatherClient;
 import dev.andres.aetherscape.weather.WeatherSnapshot;
 
@@ -147,7 +147,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         titleBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView title = text("AetherScape", 24, TEXT, true);
-        TextView subtitle = text("Live wallpaper climático · beta 0.5", 12, TEXT_SOFT, false);
+        TextView subtitle = text("Live wallpaper climático · beta 0.6", 12, TEXT_SOFT, false);
         titleBox.addView(title);
         titleBox.addView(subtitle);
         header.addView(titleBox, new LinearLayout.LayoutParams(0,
@@ -271,7 +271,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                 AppPreferences.LIVE_LOCATION, true, enabled -> {
                     if (enabled) requestOrCaptureLocation();
                 });
-        addSwitch(settingsContent, "Clima dinámico", "Usa Google Weather API y mezcla condiciones actuales con el pronóstico cercano.",
+        addSwitch(settingsContent, "Clima dinámico", "Usa el proveedor meteorológico seleccionado y mezcla condiciones actuales con el pronóstico cercano.",
                 AppPreferences.DYNAMIC_WEATHER, true, enabled -> {
                     if (enabled) WeatherClient.refreshIfNeeded(this);
                 });
@@ -443,7 +443,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
 
         LinearLayout info = card();
         info.addView(text("Motor beta", 16, TEXT, true));
-        info.addView(text("• Renderer GPU libGDX / OpenGL ES\n• Capas artísticas y mapas emisivos\n• Bloom y niebla por framebuffer\n• Cámara segura para vertical y horizontal\n• Caché meteorológico y clima multiproveedor",
+        info.addView(text("• Motor nativo Android Surface/Canvas\n• Misma escena en vista previa y fondo aplicado\n• Árboles agrupados por composición\n• Cámara segura para vertical y horizontal\n• Clima multiproveedor y modo de emergencia",
                 12, TEXT_SOFT, false));
         settingsContent.addView(info, cardParams());
 
@@ -461,14 +461,25 @@ public final class MainActivity extends Activity implements SharedPreferences.On
     }
 
     private void applyWallpaper() {
-        ComponentName component = new ComponentName(this, AetherGdxWallpaperService.class);
+        ComponentName component = new ComponentName(this, AetherWallpaperService.class);
         try {
+            getPackageManager().setComponentEnabledSetting(
+                    component,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP);
             Intent intent = new Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
             intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, component);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
-        } catch (RuntimeException error) {
-            Intent chooser = new Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER);
-            startActivity(chooser);
+            toast("Confirma AetherScape en la pantalla del sistema");
+        } catch (RuntimeException directFailure) {
+            try {
+                Intent chooser = new Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER);
+                startActivity(chooser);
+                toast("Selecciona AetherScape en la lista de fondos vivos");
+            } catch (RuntimeException chooserFailure) {
+                toast("Este launcher no pudo abrir el selector de fondos vivos");
+            }
         }
     }
 
