@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_NAME="${1:-AetherScape}"
-TAG="${2:-v0.2.0-beta.2}"
+TAG="${2:-v0.2.0-beta.3}"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PROJECT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 WORK_DIR="$HOME/.cache/aetherscape-publish-$REPO_NAME"
@@ -69,12 +69,17 @@ else
   gh repo create "$REPO_NAME" --public --source=. --remote=origin --push
 fi
 
-if git rev-parse "$TAG" >/dev/null 2>&1; then
-  git tag -f -a "$TAG" -m "AetherScape $TAG"
-  git push origin "refs/tags/$TAG" --force
-else
-  git tag -a "$TAG" -m "AetherScape $TAG"
-  git push origin "$TAG"
+# Publica una etiqueta ligera. Si git push falla por un error temporal de refs,
+# usa la API de GitHub como respaldo.
+git tag -d "$TAG" >/dev/null 2>&1 || true
+git tag "$TAG"
+if ! git push origin "refs/tags/$TAG"; then
+  echo "El push de la etiqueta falló; usando la API de GitHub como respaldo…"
+  COMMIT_SHA="$(git rev-parse HEAD)"
+  gh api -X DELETE "repos/$FULL_REPO/git/refs/tags/$TAG" >/dev/null 2>&1 || true
+  gh api -X POST "repos/$FULL_REPO/git/refs" \
+    -f ref="refs/tags/$TAG" \
+    -f sha="$COMMIT_SHA"
 fi
 
 echo

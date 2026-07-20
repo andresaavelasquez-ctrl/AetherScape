@@ -38,12 +38,12 @@ jobs:
         run: bash scripts/validate.sh
 
       - name: Build debug APK
-        run: gradle --no-daemon :app:assembleDebug
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/AetherScape-v0.1.0-beta.1-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/AetherScape-v0.2.0-beta.3-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

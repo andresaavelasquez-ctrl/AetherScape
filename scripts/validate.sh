@@ -20,5 +20,6 @@ done
 grep -q 'android.service.wallpaper.WallpaperService' app/src/main/AndroidManifest.xml
 grep -q 'compileSdk 36' app/build.gradle
 grep -q 'versionName' app/build.gradle
+grep -q 'private static float lerp' app/src/main/java/dev/andres/aetherscape/render/SceneRenderer.java
 
 echo "AetherScape source package looks complete."

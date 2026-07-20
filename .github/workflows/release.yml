@@ -37,7 +37,7 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Build installable beta APK
-        run: gradle --no-daemon :app:assembleDebug
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Rename APK
         run: |

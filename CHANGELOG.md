@@ -1,3 +1,10 @@
+## v0.2.0-beta.3
+
+- Corrección de compilación: se añadió la interpolación faltante usada por la ruta de faroles.
+- Versión Android y nombres de artefacto actualizados.
+- Script de publicación más robusto al recrear etiquetas.
+- GitHub Actions ahora muestra stacktrace completo en fallos.
+
 ## v0.2.0-beta.2
 
 - Mejora del estilo visual del paisaje para acercarlo a la referencia cozy/aesthetic.

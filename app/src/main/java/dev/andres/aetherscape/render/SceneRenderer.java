@@ -883,6 +883,10 @@ public final class SceneRenderer {
         return a + (b - a) * t;
     }
 
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
+
     private static float wrap(float value, float max) {
         if (max <= 0f) return 0f;
         float out = value % max;
