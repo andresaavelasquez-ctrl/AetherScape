@@ -24,6 +24,7 @@ required=(
   app/src/main/res/drawable/wallpaper_thumb.png
   tools/generate_visual_assets.py
   tools/render_v06_previews.py
+  keystore/aetherscape-beta.jks
 )
 
 for file in "${required[@]}"; do
@@ -34,12 +35,14 @@ grep -q 'android.service.wallpaper.WallpaperService' app/src/main/AndroidManifes
 grep -q 'wallpaper.AetherWallpaperService' app/src/main/AndroidManifest.xml
 grep -q 'gdx.AetherGdxWallpaperService' app/src/main/AndroidManifest.xml
 grep -q 'AetherWallpaperService.class' app/src/main/java/dev/andres/aetherscape/MainActivity.java
-grep -q "versionName '0.6.1-beta.8'" app/build.gradle
+grep -q "versionName '0.7.0-beta.9'" app/build.gradle
 grep -q 'LayeredCanvasRenderer' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'lockHardwareCanvas' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'drawEmergencyFrame' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'SEGMENT_WIDTH' app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
 grep -q 'open mountain vista' app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
+grep -q 'signingConfigs' app/build.gradle
+grep -q 'aetherscape-beta.jks' app/build.gradle
 grep -q 'postInvalidateOnAnimation' app/src/main/java/dev/andres/aetherscape/ui/ScenePreviewView.java
 grep -q 'Open-Meteo' app/src/main/java/dev/andres/aetherscape/MainActivity.java
 
@@ -123,4 +126,4 @@ for path in paths:
 print(f"XML válido y {len(paths)} recursos PNG verificados sin Pillow.")
 PY
 
-echo "AetherScape v0.6.1-beta.8 package looks complete."
+echo "AetherScape v0.7.0-beta.9 package looks complete."

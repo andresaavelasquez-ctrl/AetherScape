@@ -62,6 +62,11 @@ public final class LayeredCanvasRenderer {
     private final Bitmap lantern;
     private final Bitmap campfire;
 
+    private float celestialWorldX;
+    private float celestialWorldY;
+    private float celestialVisibility;
+    private boolean celestialSun;
+
     private SceneState state;
     private SceneState target;
     private float elapsed;
@@ -79,19 +84,19 @@ public final class LayeredCanvasRenderer {
         state = SceneState.fromPreferences(preferences);
         target = state.copy();
 
-        stars = asset(context, "aether/layers/stars.png", 2);
-        cloudsFar = asset(context, "aether/layers/clouds_far.png", 2);
-        cloudsNear = asset(context, "aether/layers/clouds_near.png", 2);
-        mountainsFar = asset(context, "aether/layers/mountains_far.png", 2);
-        mountainsMid = asset(context, "aether/layers/mountains_mid.png", 2);
-        mountainsHero = asset(context, "aether/layers/mountains_hero.png", 2);
-        mountainsNear = asset(context, "aether/layers/mountains_near.png", 2);
-        snowCaps = asset(context, "aether/layers/snow_caps.png", 2);
-        fogValley = asset(context, "aether/layers/fog_valley.png", 2);
-        forestFar = asset(context, "aether/layers/forest_far.png", 2);
-        forestMid = asset(context, "aether/layers/forest_mid.png", 2);
-        hillMid = asset(context, "aether/layers/hill_mid.png", 2);
-        hillFront = asset(context, "aether/layers/hill_front.png", 2);
+        stars = asset(context, "aether/layers/stars.png", 1);
+        cloudsFar = asset(context, "aether/layers/clouds_far.png", 1);
+        cloudsNear = asset(context, "aether/layers/clouds_near.png", 1);
+        mountainsFar = asset(context, "aether/layers/mountains_far.png", 1);
+        mountainsMid = asset(context, "aether/layers/mountains_mid.png", 1);
+        mountainsHero = asset(context, "aether/layers/mountains_hero.png", 1);
+        mountainsNear = asset(context, "aether/layers/mountains_near.png", 1);
+        snowCaps = asset(context, "aether/layers/snow_caps.png", 1);
+        fogValley = asset(context, "aether/layers/fog_valley.png", 1);
+        forestFar = asset(context, "aether/layers/forest_far.png", 1);
+        forestMid = asset(context, "aether/layers/forest_mid.png", 1);
+        hillMid = asset(context, "aether/layers/hill_mid.png", 1);
+        hillFront = asset(context, "aether/layers/hill_front.png", 1);
 
         pineTall = asset(context, "aether/objects/pine_tall.png", 1);
         pineMedium = asset(context, "aether/objects/pine_medium.png", 1);
@@ -165,6 +170,7 @@ public final class LayeredCanvasRenderer {
                 state.showStars ? 0.72f * state.nightFactor() * (1f - state.cloud * 0.80f) : 0f,
                 100f, 0f, 1f, null);
         drawCelestial(canvas, scale, visibleWorldWidth, parallax);
+        drawCelestialAtmosphere(canvas, width, height, scale, visibleWorldWidth);
 
         drawLayer(canvas, cloudsFar, scale, visibleWorldWidth, parallax,
                 0.010f, 1.8f + effectiveWind() * 7f,
@@ -223,6 +229,7 @@ public final class LayeredCanvasRenderer {
         drawLayer(canvas, hillFront, scale, visibleWorldWidth, parallax,
                 0.580f, 0f, 1f,
                 780f, 0f, 1f, null);
+        drawGroundLight(canvas, width, height, scale, visibleWorldWidth);
         drawFrontObjects(canvas, scale, visibleWorldWidth, parallax);
 
         drawFireflies(canvas, scale, visibleWorldWidth);
@@ -256,14 +263,28 @@ public final class LayeredCanvasRenderer {
         float radius = (sun ? 31f : 25f) * scale;
         float visibility = Math.max(0.10f, 1f - state.cloud * 0.70f);
 
+        celestialWorldX = worldX;
+        celestialWorldY = worldY;
+        celestialVisibility = visibility;
+        celestialSun = sun;
+
         if (state.showGlow) {
-            float glowRadius = radius * (sun ? 5.4f : 4.2f);
+            float outerGlowRadius = radius * (sun ? 7.8f : 5.6f);
+            int outer = sun
+                    ? Color.argb((int) (54 * visibility), 255, 181, 124)
+                    : Color.argb((int) (34 * visibility), 214, 224, 255);
+            shapePaint.setShader(new RadialGradient(x, y, outerGlowRadius,
+                    outer, Color.TRANSPARENT, Shader.TileMode.CLAMP));
+            canvas.drawCircle(x, y, outerGlowRadius, shapePaint);
+            shapePaint.setShader(null);
+
+            float innerGlowRadius = radius * (sun ? 5.2f : 4.0f);
             int center = sun
-                    ? Color.argb((int) (98 * visibility), 255, 172, 111)
-                    : Color.argb((int) (72 * visibility), 203, 218, 255);
-            shapePaint.setShader(new RadialGradient(x, y, glowRadius,
+                    ? Color.argb((int) (102 * visibility), 255, 172, 111)
+                    : Color.argb((int) (74 * visibility), 203, 218, 255);
+            shapePaint.setShader(new RadialGradient(x, y, innerGlowRadius,
                     center, Color.TRANSPARENT, Shader.TileMode.CLAMP));
-            canvas.drawCircle(x, y, glowRadius, shapePaint);
+            canvas.drawCircle(x, y, innerGlowRadius, shapePaint);
             shapePaint.setShader(null);
         }
 
@@ -274,6 +295,34 @@ public final class LayeredCanvasRenderer {
         if (!sun) {
             shapePaint.setColor(blend(skyTopColor(), skyBottomColor(), 0.46f));
             canvas.drawCircle(x + radius * 0.42f, y - radius * 0.12f, radius * 0.92f, shapePaint);
+        }
+    }
+
+    private void drawCelestialAtmosphere(Canvas canvas, int width, int height,
+                                         float scale, float visibleWorldWidth) {
+        float visibility = celestialVisibility * state.effectIntensity;
+        if (visibility <= 0.03f) return;
+        float x = (celestialWorldX + visibleWorldWidth * 0.5f) * scale;
+        float y = (WORLD_HEIGHT - celestialWorldY) * scale;
+
+        int hazeColor = celestialSun
+                ? Color.argb((int) (40 * visibility), 255, 190, 136)
+                : Color.argb((int) (20 * visibility), 198, 210, 242);
+        float hazeRadius = height * (celestialSun ? 0.34f : 0.25f);
+        shapePaint.setShader(new RadialGradient(x, y, hazeRadius, hazeColor,
+                Color.TRANSPARENT, Shader.TileMode.CLAMP));
+        canvas.drawCircle(x, y, hazeRadius, shapePaint);
+        shapePaint.setShader(null);
+
+        float horizonY = height * 0.70f;
+        float beamHalfWidth = width * (celestialSun ? 0.14f : 0.09f);
+        int beamAlpha = (int) ((celestialSun ? 26 : 12) * visibility * (1f - state.cloud * 0.52f));
+        if (beamAlpha > 0) {
+            shapePaint.setShader(new LinearGradient(x, y, x, horizonY,
+                    Color.argb(beamAlpha, celestialSun ? 255 : 210, celestialSun ? 192 : 217, celestialSun ? 140 : 245),
+                    Color.TRANSPARENT, Shader.TileMode.CLAMP));
+            canvas.drawRect(x - beamHalfWidth, y, x + beamHalfWidth, horizonY, shapePaint);
+            shapePaint.setShader(null);
         }
     }
 
@@ -321,8 +370,10 @@ public final class LayeredCanvasRenderer {
                 float worldX = segment * SEGMENT_WIDTH + positions[i] * SEGMENT_WIDTH;
                 float screenWorldX = worldX - layerScroll;
                 if (!visible(screenWorldX, visibleWorldWidth, 220f)) continue;
-                Bitmap tree = pickBackTree(segment, i);
-                float height = 112f + hash01(segment * 91 + i * 37) * 118f;
+                float corridor = heroCorridor(worldX, 120f, 360f);
+                if (corridor <= 0.08f) continue;
+                Bitmap tree = corridor < 0.45f ? pineSparse : pickBackTree(segment, i);
+                float height = (112f + hash01(segment * 91 + i * 37) * 118f) * (0.72f + corridor * 0.28f);
                 float y = midTerrain(worldX) - 4f;
                 float sway = (float) Math.sin(elapsed * (0.38f + effectiveWind() * 0.58f)
                         + segment * 0.8f + i) * effectiveWind() * 0.8f;
@@ -374,10 +425,14 @@ public final class LayeredCanvasRenderer {
                 float worldX = segment * SEGMENT_WIDTH + positions[i] * SEGMENT_WIDTH;
                 float screenWorldX = worldX - layerScroll;
                 if (!visible(screenWorldX, visibleWorldWidth, 300f)) continue;
-                Bitmap tree = pickFrontTree(segment, i, template);
+                float corridor = heroCorridor(worldX, 150f, 420f);
+                if (corridor <= 0.05f) continue;
+                Bitmap tree = corridor < 0.52f ? pineSparse : pickFrontTree(segment, i, template);
+                if (corridor < 0.40f && tree == pineDead) tree = pineSparse;
                 float height = (205f + hash01(segment * 113 + i * 29) * 105f) * sizes[i];
+                height *= (0.60f + corridor * 0.40f);
                 // Caps prevent needle-like trees on extremely tall screens.
-                height = Math.min(315f, Math.max(120f, height));
+                height = Math.min(315f, Math.max(108f, height));
                 float y = frontTerrain(worldX) - 3f;
                 float sway = (float) Math.sin(elapsed * (0.50f + effectiveWind() * 0.92f)
                         + segment * 0.7f + i) * effectiveWind() * 1.55f;
@@ -435,11 +490,28 @@ public final class LayeredCanvasRenderer {
         float bottom = (WORLD_HEIGHT - baseY) * scale;
         float width = widthWorld * scale;
         float height = heightWorld * scale;
+        drawGroundShadow(canvas, x, bottom, width, height, worldX, visibleWorldWidth);
         canvas.save();
         canvas.rotate(rotation, x + width * 0.5f, bottom);
         canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()),
                 new RectF(x, bottom - height, x + width, bottom), paint);
         canvas.restore();
+    }
+
+    private void drawGroundShadow(Canvas canvas, float x, float bottom, float width, float height,
+                                  float worldX, float visibleWorldWidth) {
+        float lightStrength = celestialVisibility * (celestialSun ? (0.32f + (1f - state.nightFactor()) * 0.34f) : 0.12f);
+        if (lightStrength <= 0.02f) return;
+        float direction = clampSigned((worldX - celestialWorldX) / Math.max(1f, visibleWorldWidth * 0.55f));
+        float shadowWidth = width * (0.42f + (celestialSun ? 0.22f : 0.08f));
+        float shadowHeight = Math.max(8f, width * 0.16f);
+        float dx = direction * shadowWidth * 0.28f;
+        shapePaint.setColor(Color.argb((int) (44 * lightStrength), 3, 7, 15));
+        canvas.drawOval(new RectF(x + width * 0.18f + dx, bottom - shadowHeight * 0.40f,
+                x + width * 0.18f + dx + shadowWidth, bottom + shadowHeight * 0.22f), shapePaint);
+        shapePaint.setColor(Color.argb((int) (18 * lightStrength), 3, 7, 15));
+        canvas.drawOval(new RectF(x + width * 0.08f + dx, bottom - shadowHeight * 0.62f,
+                x + width * 0.08f + dx + shadowWidth * 1.18f, bottom + shadowHeight * 0.34f), shapePaint);
     }
 
     private void drawGlow(Canvas canvas, float worldX, float worldY, float radiusWorld,
@@ -453,6 +525,25 @@ public final class LayeredCanvasRenderer {
                 Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color)),
                 Color.TRANSPARENT, Shader.TileMode.CLAMP));
         canvas.drawCircle(x, y, radius, shapePaint);
+        shapePaint.setShader(null);
+    }
+
+    private void drawGroundLight(Canvas canvas, int width, int height,
+                                 float scale, float visibleWorldWidth) {
+        float lightAmount = celestialVisibility * state.effectIntensity * (celestialSun ? 0.55f : 0.24f);
+        if (lightAmount <= 0.02f) return;
+        float x = (celestialWorldX + visibleWorldWidth * 0.5f) * scale;
+        float y = height * 0.79f;
+        float rx = width * (celestialSun ? 0.28f : 0.22f);
+        float ry = height * (celestialSun ? 0.16f : 0.10f);
+        int alpha = (int) (30f * lightAmount * (1f - state.rain * 0.65f));
+        shapePaint.setShader(new RadialGradient(x, y, Math.max(rx, ry),
+                Color.argb(alpha, celestialSun ? 255 : 194, celestialSun ? 186 : 208, celestialSun ? 124 : 236),
+                Color.TRANSPARENT, Shader.TileMode.CLAMP));
+        canvas.save();
+        canvas.scale(1f, ry / Math.max(1f, rx), x, y);
+        canvas.drawCircle(x, y, rx, shapePaint);
+        canvas.restore();
         shapePaint.setShader(null);
     }
 
@@ -659,6 +750,13 @@ public final class LayeredCanvasRenderer {
         float local = positiveModulo(worldX, LAYER_WIDTH) / LAYER_WIDTH * (float) (Math.PI * 2.0);
         return 82f + (float) Math.sin(local + 1.02f) * 22f
                 + (float) Math.sin(local * 2f + 0.22f) * 9f;
+    }
+
+    private static float heroCorridor(float worldX, float inner, float outer) {
+        float local = positiveModulo(worldX, LAYER_WIDTH);
+        float distance = Math.abs(local - LAYER_WIDTH * 0.5f);
+        distance = Math.min(distance, LAYER_WIDTH - distance);
+        return clamp01((distance - inner) / Math.max(1f, outer - inner));
     }
 
     private static int blend(int a, int b, float t) {

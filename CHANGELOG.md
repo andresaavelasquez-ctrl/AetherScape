@@ -1,3 +1,11 @@
+## v0.7.0-beta.9
+
+- Reorganiza todavía más la composición del paisaje para despejar la montaña central y evitar árboles desordenados o mal ubicados.
+- Mejora la nitidez del fondo aplicado cargando todas las capas principales a resolución completa.
+- Añade iluminación atmosférica reforzada para sol y luna, además de sombras suaves proyectadas en árboles y objetos.
+- Refina la lectura visual del terreno con un baño de luz sobre la colina frontal.
+- Introduce una firma fija del APK (`dev.andres.aetherscape.beta`) para que, desde esta versión en adelante, las próximas betas puedan instalarse encima sin desinstalar la aplicación anterior.
+
 ## v0.6.1-beta.8
 
 - Corrige el fallo de GitHub Actions `ModuleNotFoundError: No module named PIL`.
