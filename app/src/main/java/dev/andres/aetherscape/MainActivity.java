@@ -147,7 +147,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         titleBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView title = text("AetherScape", 24, TEXT, true);
-        TextView subtitle = text("Live wallpaper climático · beta 0.7.0", 12, TEXT_SOFT, false);
+        TextView subtitle = text("Live wallpaper climático · beta 0.7.1", 12, TEXT_SOFT, false);
         titleBox.addView(title);
         titleBox.addView(subtitle);
         header.addView(titleBox, new LinearLayout.LayoutParams(0,

@@ -1,3 +1,10 @@
+## v0.7.1-beta.10
+
+- Corrige el empaquetado: el keystore beta ya no se pierde por la regla `*.jks` de `.gitignore`.
+- El script de publicación fuerza la inclusión del mismo keystore de beta 0.7.
+- La validación comprueba el SHA-256 del keystore para impedir cambios accidentales de firma.
+- Mantiene `dev.andres.aetherscape.beta` y la misma firma para actualizaciones sobre la app anterior.
+
 ## v0.7.0-beta.9
 
 - Reorganiza todavía más la composición del paisaje para despejar la montaña central y evitar árboles desordenados o mal ubicados.

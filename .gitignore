@@ -8,6 +8,10 @@ local.properties
 .externalNativeBuild/
 *.jks
 *.keystore
+
+# AetherScape beta update key. Keep this exact file unchanged between beta builds.
+!keystore/
+!keystore/aetherscape-beta.jks
 .DS_Store
 
 app/src/main/jniLibs/

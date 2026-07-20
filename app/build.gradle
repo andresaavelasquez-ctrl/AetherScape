@@ -10,8 +10,8 @@ android {
         applicationId 'dev.andres.aetherscape'
         minSdk 26
         targetSdk 36
-        versionCode 9
-        versionName '0.7.0-beta.9'
+        versionCode 10
+        versionName '0.7.1-beta.10'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
 

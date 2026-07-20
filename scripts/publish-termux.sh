@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_NAME="${1:-AetherScape}"
-TAG="${2:-v0.7.0-beta.9}"
+TAG="${2:-v0.7.1-beta.10}"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 PROJECT_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 WORK_DIR="$HOME/.cache/aetherscape-publish-$REPO_NAME"
@@ -57,6 +57,9 @@ git config user.email "${USER_ID}+${OWNER}@users.noreply.github.com"
 git branch -M main
 
 git add -A
+# The update key must be committed unchanged so every APK keeps the same signature.
+# -f protects against older global/local ignore rules that may still ignore *.jks.
+git add -f keystore/aetherscape-beta.jks
 if git diff --cached --quiet; then
   echo "No hay cambios nuevos para publicar."
 else
