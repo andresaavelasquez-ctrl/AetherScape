@@ -33,7 +33,7 @@ public class AetherWallpaperService extends WallpaperService {
         private final HandlerThread renderThread = new HandlerThread("AetherNativeLayerEngine");
         private Handler renderHandler;
         private SharedPreferences preferences;
-        private LayeredCanvasRenderer renderer;
+        private volatile LayeredCanvasRenderer renderer;
         private volatile boolean visible;
         private volatile boolean surfaceReady;
         private int width = 1;
@@ -46,7 +46,7 @@ public class AetherWallpaperService extends WallpaperService {
                 if (!surfaceReady || renderHandler == null) return;
                 drawFrame();
                 if (visible && surfaceReady) {
-                    int fps = renderer == null ? 30 : renderer.targetFps();
+                    int fps = renderer == null ? 30 : renderer.recommendedFps();
                     renderHandler.postDelayed(this, Math.max(16L, 1000L / Math.max(15, fps)));
                 }
             }
@@ -62,22 +62,32 @@ public class AetherWallpaperService extends WallpaperService {
             AppPreferences.ensureDefaults(AetherWallpaperService.this);
             preferences = AppPreferences.get(AetherWallpaperService.this);
             preferences.registerOnSharedPreferenceChangeListener(this);
-            renderer = new LayeredCanvasRenderer(
-                    AetherWallpaperService.this.getApplicationContext(), preferences);
-            renderer.setPreview(false);
-
             renderThread.start();
             renderHandler = new Handler(renderThread.getLooper());
+            // Decode the large scene assets on the dedicated rendering thread,
+            // never on Android's main thread or the launcher animation thread.
+            renderHandler.post(() -> {
+                if (!renderThread.isAlive()) return;
+                renderer = new LayeredCanvasRenderer(
+                        AetherWallpaperService.this.getApplicationContext(), preferences, false);
+                schedule(true);
+            });
         }
 
         @Override
         public void onDestroy() {
             visible = false;
             surfaceReady = false;
-            if (renderHandler != null) renderHandler.removeCallbacksAndMessages(null);
             if (preferences != null) preferences.unregisterOnSharedPreferenceChangeListener(this);
-            if (renderer != null) renderer.dispose();
-            renderer = null;
+            Handler handler = renderHandler;
+            if (handler != null) {
+                handler.removeCallbacks(frame);
+                handler.post(() -> {
+                    LayeredCanvasRenderer current = renderer;
+                    renderer = null;
+                    if (current != null) current.dispose();
+                });
+            }
             renderThread.quitSafely();
             super.onDestroy();
         }
@@ -129,41 +139,61 @@ public class AetherWallpaperService extends WallpaperService {
         @Override
         public void onOffsetsChanged(float xOffset, float yOffset, float xOffsetStep,
                                      float yOffsetStep, int xPixelOffset, int yPixelOffset) {
-            if (renderer != null) renderer.setLauncherOffset((xOffset - 0.5f) * 2f);
-            schedule(false);
+            Handler handler = renderHandler;
+            if (handler != null) handler.post(() -> {
+                LayeredCanvasRenderer current = renderer;
+                if (current != null) current.setLauncherOffset((xOffset - 0.5f) * 2f);
+                schedule(false);
+            });
         }
 
         @Override
         public void onTouchEvent(MotionEvent event) {
-            if (renderer != null && (event.getActionMasked() == MotionEvent.ACTION_DOWN
-                    || event.getActionMasked() == MotionEvent.ACTION_MOVE)) {
-                renderer.touch(event.getX() / Math.max(1f, width),
-                        event.getY() / Math.max(1f, height));
-                schedule(false);
-            } else if (renderer != null && (event.getActionMasked() == MotionEvent.ACTION_UP
-                    || event.getActionMasked() == MotionEvent.ACTION_CANCEL)) {
-                renderer.releaseTouch();
-            }
+            final int action = event.getActionMasked();
+            final float nx = event.getX() / Math.max(1f, width);
+            final float ny = event.getY() / Math.max(1f, height);
+            Handler handler = renderHandler;
+            if (handler != null) handler.post(() -> {
+                LayeredCanvasRenderer current = renderer;
+                if (current == null) return;
+                if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+                    current.touch(nx, ny);
+                    schedule(false);
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    current.releaseTouch();
+                }
+            });
             super.onTouchEvent(event);
         }
 
         @Override
         public Bundle onCommand(String action, int x, int y, int z, Bundle extras,
                                 boolean resultRequested) {
-            if (renderer != null && ("android.wallpaper.tap".equals(action)
+            if ("android.wallpaper.tap".equals(action)
                     || "android.wallpaper.secondaryTap".equals(action)
-                    || "android.home.drop".equals(action))) {
-                renderer.touch(x / Math.max(1f, width), y / Math.max(1f, height));
-                renderer.pulseLights();
-                schedule(false);
+                    || "android.home.drop".equals(action)) {
+                final float nx = x / Math.max(1f, width);
+                final float ny = y / Math.max(1f, height);
+                Handler handler = renderHandler;
+                if (handler != null) handler.post(() -> {
+                    LayeredCanvasRenderer current = renderer;
+                    if (current == null) return;
+                    current.touch(nx, ny);
+                    current.pulseLights();
+                    schedule(false);
+                });
             }
             return super.onCommand(action, x, y, z, extras, resultRequested);
         }
 
         @Override
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            if (renderer != null) renderer.reloadPreferences();
-            schedule(false);
+            Handler handler = renderHandler;
+            if (handler != null) handler.post(() -> {
+                LayeredCanvasRenderer current = renderer;
+                if (current != null) current.reloadPreferences();
+                schedule(false);
+            });
         }
 
         private void schedule(boolean forceOneFrame) {

@@ -40,7 +40,32 @@ public final class LayeredCanvasRenderer {
     private final Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
     private final Paint shapePaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
     private final Paint weatherPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+    private final Paint cachePaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+    private final Rect reusableSrc = new Rect();
+    private final RectF reusableDst = new RectF();
+    private final RectF shadowRectPrimary = new RectF();
+    private final RectF shadowRectSecondary = new RectF();
     private final List<Bitmap> owned = new ArrayList<>();
+
+    private Bitmap backgroundCache;
+    private Canvas backgroundCanvas;
+    private int backgroundWidth;
+    private int backgroundHeight;
+    private float lastBackgroundRender = -100f;
+    private boolean backgroundDirty = true;
+    private boolean backgroundCacheDisabled;
+
+    private ColorMatrixColorFilter atmosphere94;
+    private ColorMatrixColorFilter atmosphere90;
+    private ColorMatrixColorFilter atmosphere96;
+    private ColorMatrixColorFilter atmosphere86;
+    private ColorMatrixColorFilter mountainFilter;
+    private ColorMatrixColorFilter forest82;
+    private ColorMatrixColorFilter forest92;
+    private ColorMatrixColorFilter forest80;
+    private float filterRefreshTimer;
+    private float preferenceRefreshTimer;
+    private boolean previewEcoMode = true;
 
     private final Bitmap stars;
     private final Bitmap cloudsFar;
@@ -79,35 +104,58 @@ public final class LayeredCanvasRenderer {
     private float gustPulse;
     private boolean preview;
 
-    public LayeredCanvasRenderer(Context context, SharedPreferences preferences) {
+    public LayeredCanvasRenderer(Context context, SharedPreferences preferences, boolean preview) {
         this.preferences = preferences;
+        this.preview = preview;
+        this.previewEcoMode = preferences.getBoolean(AppPreferences.PREVIEW_ECO_MODE, true);
         state = SceneState.fromPreferences(preferences);
         target = state.copy();
 
-        stars = asset(context, "aether/layers/stars.png", 1);
-        cloudsFar = asset(context, "aether/layers/clouds_far.png", 1);
-        cloudsNear = asset(context, "aether/layers/clouds_near.png", 1);
-        mountainsFar = asset(context, "aether/layers/mountains_far.png", 1);
-        mountainsMid = asset(context, "aether/layers/mountains_mid.png", 1);
-        mountainsHero = asset(context, "aether/layers/mountains_hero.png", 1);
-        mountainsNear = asset(context, "aether/layers/mountains_near.png", 1);
-        snowCaps = asset(context, "aether/layers/snow_caps.png", 1);
-        fogValley = asset(context, "aether/layers/fog_valley.png", 1);
-        forestFar = asset(context, "aether/layers/forest_far.png", 1);
-        forestMid = asset(context, "aether/layers/forest_mid.png", 1);
-        hillMid = asset(context, "aether/layers/hill_mid.png", 1);
-        hillFront = asset(context, "aether/layers/hill_front.png", 1);
+        // The source illustrations are deliberately larger than their logical
+        // world. Decoding them at purpose-specific sizes keeps edge quality
+        // while avoiding the ~500 MB full-resolution allocation of beta 0.8.
+        int layerSample = preview ? 8 : 2;
+        int heroSample = preview ? 4 : 1;
+        int objectSample = preview ? 4 : 1;
+        stars = asset(context, "aether/layers/stars.png", layerSample);
+        cloudsFar = asset(context, "aether/layers/clouds_far.png", layerSample);
+        cloudsNear = asset(context, "aether/layers/clouds_near.png", layerSample);
+        mountainsFar = asset(context, "aether/layers/mountains_far.png", layerSample);
+        mountainsMid = asset(context, "aether/layers/mountains_mid.png", layerSample);
+        mountainsHero = asset(context, "aether/layers/mountains_hero.png", heroSample);
+        mountainsNear = asset(context, "aether/layers/mountains_near.png", layerSample);
+        snowCaps = asset(context, "aether/layers/snow_caps.png", layerSample);
+        fogValley = asset(context, "aether/layers/fog_valley.png", layerSample);
+        forestFar = asset(context, "aether/layers/forest_far.png", layerSample);
+        forestMid = asset(context, "aether/layers/forest_mid.png", layerSample);
+        hillMid = asset(context, "aether/layers/hill_mid.png", layerSample);
+        hillFront = asset(context, "aether/layers/hill_front.png", layerSample);
 
-        pineTall = asset(context, "aether/objects/pine_tall.png", 1);
-        pineMedium = asset(context, "aether/objects/pine_medium.png", 1);
-        pineSparse = asset(context, "aether/objects/pine_sparse.png", 1);
-        pineDead = asset(context, "aether/objects/pine_dead.png", 1);
+        pineTall = asset(context, "aether/objects/pine_tall.png", objectSample);
+        pineMedium = asset(context, "aether/objects/pine_medium.png", objectSample);
+        pineSparse = asset(context, "aether/objects/pine_sparse.png", objectSample);
+        pineDead = asset(context, "aether/objects/pine_dead.png", objectSample);
         lantern = asset(context, "aether/objects/lantern.png", 1);
         campfire = asset(context, "aether/objects/campfire.png", 1);
+        updateCachedFilters();
     }
 
     public int targetFps() {
         return Math.max(15, Math.min(60, state.targetFps));
+    }
+
+    /** Frame pacing changes temporal cost only; texture and render resolution stay unchanged. */
+    public int recommendedFps() {
+        int maximum = targetFps();
+        if (preview && previewEcoMode) {
+            return Math.min(maximum, pulse > 0.04f || gustPulse > 0.04f ? 24 : 15);
+        }
+        if (!state.adaptiveRendering) return maximum;
+        float activity = Math.max(Math.max(state.rain, state.snow),
+                Math.max(state.storm, Math.max(effectiveWind() * 0.72f, pulse)));
+        if (activity < 0.12f && state.motionIntensity < 0.48f) return Math.min(maximum, 20);
+        if (activity < 0.38f) return Math.min(maximum, 24);
+        return maximum;
     }
 
     public void setPreview(boolean preview) {
@@ -137,16 +185,28 @@ public final class LayeredCanvasRenderer {
 
     public void reloadPreferences() {
         target = SceneState.fromPreferences(preferences);
+        previewEcoMode = preferences.getBoolean(AppPreferences.PREVIEW_ECO_MODE, true);
+        backgroundDirty = true;
+        filterRefreshTimer = 1f;
     }
 
     public void draw(Canvas canvas, int width, int height, float deltaSeconds) {
         if (canvas == null || width <= 0 || height <= 0) return;
         float dt = Math.max(0f, Math.min(0.05f, deltaSeconds));
-        if (dt <= 0f) dt = 1f / Math.max(15, targetFps());
+        if (dt <= 0f) dt = 1f / Math.max(15, recommendedFps());
 
         elapsed += dt;
-        target = SceneState.fromPreferences(preferences);
+        preferenceRefreshTimer += dt;
+        filterRefreshTimer += dt;
+        if (preferenceRefreshTimer >= 1f) {
+            preferenceRefreshTimer = 0f;
+            target = SceneState.fromPreferences(preferences);
+        }
         state.smoothToward(target, 1f - (float) Math.exp(-dt * 1.5f));
+        if (filterRefreshTimer >= 0.45f) {
+            filterRefreshTimer = 0f;
+            updateCachedFilters();
+        }
         pulse = Math.max(0f, pulse - dt * 0.72f);
         gustPulse = Math.max(0f, gustPulse - dt * 0.30f);
 
@@ -163,36 +223,47 @@ public final class LayeredCanvasRenderer {
                 : 0f;
 
         canvas.drawColor(Color.rgb(7, 11, 22));
-        drawSky(canvas, width, height);
+        if (ensureBackgroundCache(width, height)) {
+            float interval = preview ? 0.10f : (state.adaptiveRendering ? 0.075f : 0.05f);
+            if (backgroundDirty || elapsed - lastBackgroundRender >= interval) {
+                backgroundCanvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR);
+                renderBackground(backgroundCanvas, width, height, scale, visibleWorldWidth, parallax);
+                lastBackgroundRender = elapsed;
+                backgroundDirty = false;
+            }
+            canvas.drawBitmap(backgroundCache, 0f, 0f, cachePaint);
+        } else {
+            renderBackground(canvas, width, height, scale, visibleWorldWidth, parallax);
+        }
+        renderForeground(canvas, width, height, scale, visibleWorldWidth, parallax);
+    }
 
+    private void renderBackground(Canvas canvas, int width, int height, float scale,
+                                  float visibleWorldWidth, float parallax) {
+        drawSky(canvas, width, height);
         drawLayer(canvas, stars, scale, visibleWorldWidth, parallax,
                 0.002f, 0f,
                 state.showStars ? 0.72f * state.nightFactor() * (1f - state.cloud * 0.80f) : 0f,
                 100f, 0f, 1f, null);
         drawCelestial(canvas, scale, visibleWorldWidth, parallax);
         drawCelestialAtmosphere(canvas, width, height, scale, visibleWorldWidth);
-
         drawLayer(canvas, cloudsFar, scale, visibleWorldWidth, parallax,
                 0.010f, 1.8f + effectiveWind() * 7f,
                 0.14f + state.cloud * 0.44f,
-                360f, 0f, 1f, atmosphericFilter(0.94f));
-
+                360f, 0f, 1f, atmosphere94);
         drawLayer(canvas, mountainsFar, scale, visibleWorldWidth, parallax,
                 0.025f, 0f, 0.62f,
-                0f, 0f, 1f, atmosphericFilter(0.90f));
+                0f, 0f, 1f, atmosphere90);
         drawLayer(canvas, fogValley, scale, visibleWorldWidth, parallax,
                 0.028f, 0.24f,
                 0.08f + state.fog * 0.30f,
                 670f, 0f, 1f, null);
         drawLayer(canvas, mountainsMid, scale, visibleWorldWidth, parallax,
                 0.055f, 0f, 0.78f,
-                190f, 0f, 1f, atmosphericFilter(0.96f));
-
-        // The hero range remains the visual focus. It moves very slowly and is
-        // deliberately left clear by the front object templates.
+                190f, 0f, 1f, atmosphere96);
         drawLayer(canvas, mountainsHero, scale, visibleWorldWidth, parallax,
                 0.078f, 0f, 0.98f,
-                0f, 0f, 1f, seasonalMountainFilter());
+                0f, 0f, 1f, mountainFilter);
         float snow = state.snowCaps && (state.season == SceneState.Season.WINTER
                 || state.temperatureC < 4f || state.snow > 0.14f)
                 ? Math.min(0.94f, 0.28f + state.snow * 0.64f
@@ -201,22 +272,23 @@ public final class LayeredCanvasRenderer {
         drawLayer(canvas, snowCaps, scale, visibleWorldWidth, parallax,
                 0.078f, 0f, snow,
                 0f, 0f, 1f, null);
-
         drawLayer(canvas, mountainsNear, scale, visibleWorldWidth, parallax,
                 0.115f, 0f, 0.88f,
-                510f, 0f, 1f, seasonalMountainFilter());
+                510f, 0f, 1f, mountainFilter);
         drawLayer(canvas, forestFar, scale, visibleWorldWidth, parallax,
                 0.165f, 0f, 0.64f,
-                760f, 0f, 1f, forestFilter(0.82f));
+                760f, 0f, 1f, forest82);
         drawLayer(canvas, forestMid, scale, visibleWorldWidth, parallax,
                 0.225f, 0f, 0.78f,
-                1110f, 0f, 1f, forestFilter(0.92f));
+                1110f, 0f, 1f, forest92);
+    }
 
+    private void renderForeground(Canvas canvas, int width, int height, float scale,
+                                  float visibleWorldWidth, float parallax) {
         drawLayer(canvas, hillMid, scale, visibleWorldWidth, parallax,
                 0.320f, 0f, 1f,
                 240f, 0f, 1f, null);
         drawBackObjects(canvas, scale, visibleWorldWidth, parallax);
-
         drawLayer(canvas, fogValley, scale, visibleWorldWidth, parallax,
                 0.120f, 0.40f,
                 state.fog * 0.28f + state.rain * 0.05f,
@@ -224,17 +296,51 @@ public final class LayeredCanvasRenderer {
         drawLayer(canvas, cloudsNear, scale, visibleWorldWidth, parallax,
                 0.024f, 3.5f + effectiveWind() * 13f,
                 state.cloud * 0.56f,
-                900f, 0f, 1f, atmosphericFilter(0.86f));
-
+                900f, 0f, 1f, atmosphere86);
         drawLayer(canvas, hillFront, scale, visibleWorldWidth, parallax,
                 0.580f, 0f, 1f,
                 780f, 0f, 1f, null);
         drawGroundLight(canvas, width, height, scale, visibleWorldWidth);
         drawFrontObjects(canvas, scale, visibleWorldWidth, parallax);
-
         drawFireflies(canvas, scale, visibleWorldWidth);
         drawWeather(canvas, width, height);
         drawAtmosphere(canvas, width, height);
+    }
+
+    private boolean ensureBackgroundCache(int width, int height) {
+        if (backgroundCacheDisabled) return false;
+        if (backgroundCache != null && backgroundWidth == width && backgroundHeight == height) return true;
+        recycleBackgroundCache();
+        try {
+            backgroundCache = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            backgroundCanvas = new Canvas(backgroundCache);
+            backgroundWidth = width;
+            backgroundHeight = height;
+            backgroundDirty = true;
+            return true;
+        } catch (OutOfMemoryError error) {
+            backgroundCacheDisabled = true;
+            return false;
+        }
+    }
+
+    private void recycleBackgroundCache() {
+        if (backgroundCache != null && !backgroundCache.isRecycled()) backgroundCache.recycle();
+        backgroundCache = null;
+        backgroundCanvas = null;
+        backgroundWidth = 0;
+        backgroundHeight = 0;
+    }
+
+    private void updateCachedFilters() {
+        atmosphere94 = createAtmosphericFilter(0.94f);
+        atmosphere90 = createAtmosphericFilter(0.90f);
+        atmosphere96 = createAtmosphericFilter(0.96f);
+        atmosphere86 = createAtmosphericFilter(0.86f);
+        mountainFilter = createSeasonalMountainFilter();
+        forest82 = createForestFilter(0.82f);
+        forest92 = createForestFilter(0.92f);
+        forest80 = createForestFilter(0.80f);
     }
 
     private void drawSky(Canvas canvas, int width, int height) {
@@ -353,18 +459,23 @@ public final class LayeredCanvasRenderer {
         if (bitmap == null || alpha <= 0.001f) return;
         float offset = positiveModulo(scroll * depth + elapsed * driftPerSecond
                 + parallaxOffset * depth * 150f + phase, LAYER_WIDTH);
-        float first = -LAYER_WIDTH * 1.5f - offset;
+        float baseWorldX = -offset;
+        float left = -visibleWorldWidth * 0.5f;
+        float right = visibleWorldWidth * 0.5f;
+        int firstIndex = (int) Math.floor((left - baseWorldX) / LAYER_WIDTH) - 1;
+        int lastIndex = (int) Math.ceil((right - baseWorldX) / LAYER_WIDTH) + 1;
         float widthPx = LAYER_WIDTH * scale;
         float heightPx = WORLD_HEIGHT * heightScale * scale;
         float yPx = -yOffset * scale;
         bitmapPaint.setAlpha((int) (255 * clamp01(alpha)));
         bitmapPaint.setColorFilter(filter);
-        Rect src = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
-        int copies = Math.max(4, (int) Math.ceil(visibleWorldWidth / LAYER_WIDTH) + 4);
-        for (int i = 0; i < copies; i++) {
-            float worldX = first + i * LAYER_WIDTH;
+        reusableSrc.set(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        for (int i = firstIndex; i <= lastIndex; i++) {
+            float worldX = baseWorldX + i * LAYER_WIDTH;
+            if (worldX > right + LAYER_WIDTH || worldX + LAYER_WIDTH < left - LAYER_WIDTH) continue;
             float x = (worldX + visibleWorldWidth * 0.5f) * scale;
-            canvas.drawBitmap(bitmap, src, new RectF(x, yPx, x + widthPx, yPx + heightPx), bitmapPaint);
+            reusableDst.set(x, yPx, x + widthPx, yPx + heightPx);
+            canvas.drawBitmap(bitmap, reusableSrc, reusableDst, bitmapPaint);
         }
         bitmapPaint.setAlpha(255);
         bitmapPaint.setColorFilter(null);
@@ -376,7 +487,7 @@ public final class LayeredCanvasRenderer {
         int start = (int) Math.floor((layerScroll - visibleWorldWidth) / SEGMENT_WIDTH) - 2;
         int end = start + (int) Math.ceil(visibleWorldWidth * 2f / SEGMENT_WIDTH) + 5;
         bitmapPaint.setAlpha(150);
-        bitmapPaint.setColorFilter(forestFilter(0.80f));
+        bitmapPaint.setColorFilter(forest80);
         for (int segment = start; segment <= end; segment++) {
             int template = positiveMod(segment, 4);
             float[] positions = template == 0
@@ -413,7 +524,7 @@ public final class LayeredCanvasRenderer {
         float layerScroll = scroll * 0.58f + parallax * 44f;
         int start = (int) Math.floor((layerScroll - visibleWorldWidth) / SEGMENT_WIDTH) - 2;
         int end = start + (int) Math.ceil(visibleWorldWidth * 2f / SEGMENT_WIDTH) + 5;
-        bitmapPaint.setColorFilter(forestFilter(1f));
+        bitmapPaint.setColorFilter(forest92);
         for (int segment = start; segment <= end; segment++) {
             int template = positiveMod(segment, 5);
             float[] positions;
@@ -513,8 +624,9 @@ public final class LayeredCanvasRenderer {
         drawGroundShadow(canvas, x, bottom, width, height, worldX, visibleWorldWidth);
         canvas.save();
         canvas.rotate(rotation, x + width * 0.5f, bottom);
-        canvas.drawBitmap(bitmap, new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight()),
-                new RectF(x, bottom - height, x + width, bottom), paint);
+        reusableSrc.set(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        reusableDst.set(x, bottom - height, x + width, bottom);
+        canvas.drawBitmap(bitmap, reusableSrc, reusableDst, paint);
         canvas.restore();
     }
 
@@ -527,11 +639,13 @@ public final class LayeredCanvasRenderer {
         float shadowHeight = Math.max(8f, width * 0.16f);
         float dx = direction * shadowWidth * 0.28f;
         shapePaint.setColor(Color.argb((int) (44 * lightStrength), 3, 7, 15));
-        canvas.drawOval(new RectF(x + width * 0.18f + dx, bottom - shadowHeight * 0.40f,
-                x + width * 0.18f + dx + shadowWidth, bottom + shadowHeight * 0.22f), shapePaint);
+        shadowRectPrimary.set(x + width * 0.18f + dx, bottom - shadowHeight * 0.40f,
+                x + width * 0.18f + dx + shadowWidth, bottom + shadowHeight * 0.22f);
+        canvas.drawOval(shadowRectPrimary, shapePaint);
         shapePaint.setColor(Color.argb((int) (18 * lightStrength), 3, 7, 15));
-        canvas.drawOval(new RectF(x + width * 0.08f + dx, bottom - shadowHeight * 0.62f,
-                x + width * 0.08f + dx + shadowWidth * 1.18f, bottom + shadowHeight * 0.34f), shapePaint);
+        shadowRectSecondary.set(x + width * 0.08f + dx, bottom - shadowHeight * 0.62f,
+                x + width * 0.08f + dx + shadowWidth * 1.18f, bottom + shadowHeight * 0.34f);
+        canvas.drawOval(shadowRectSecondary, shapePaint);
     }
 
     private void drawGlow(Canvas canvas, float worldX, float worldY, float radiusWorld,
@@ -573,6 +687,7 @@ public final class LayeredCanvasRenderer {
             weatherPaint.setColor(Color.argb((int) (42 + state.rain * 82), 158, 181, 211));
             weatherPaint.setStrokeWidth(0.8f + state.rain * 1.25f);
             int count = 45 + (int) (state.rain * 155f);
+            if (preview && previewEcoMode) count = Math.max(30, (int) (count * 0.58f));
             for (int i = 0; i < count; i++) {
                 float x = positiveModulo(hash01(i * 37) * width
                         + elapsed * (60f + wind * 170f), width);
@@ -585,6 +700,7 @@ public final class LayeredCanvasRenderer {
         if (state.snow > 0.02f) {
             weatherPaint.setColor(Color.argb((int) (118 + state.snow * 92), 238, 241, 244));
             int count = 24 + (int) (state.snow * 78f);
+            if (preview && previewEcoMode) count = Math.max(18, (int) (count * 0.62f));
             for (int i = 0; i < count; i++) {
                 float x = positiveModulo(hash01(i * 67) * width
                         + (float) Math.sin(elapsed * 0.9f + i) * (18f + wind * 18f), width);
@@ -654,7 +770,7 @@ public final class LayeredCanvasRenderer {
         return clamp01(state.wind + gustPulse * 0.42f);
     }
 
-    private ColorMatrixColorFilter forestFilter(float depth) {
+    private ColorMatrixColorFilter createForestFilter(float depth) {
         float night = state.nightFactor();
         float r = 0.88f, g = 0.92f, b = 1.00f;
         switch (state.season) {
@@ -677,7 +793,7 @@ public final class LayeredCanvasRenderer {
         return new ColorMatrixColorFilter(matrix);
     }
 
-    private ColorMatrixColorFilter atmosphericFilter(float brightness) {
+    private ColorMatrixColorFilter createAtmosphericFilter(float brightness) {
         float cloudDimming = 1f - state.cloud * 0.06f - state.rain * 0.07f;
         float value = brightness * cloudDimming;
         ColorMatrix matrix = new ColorMatrix();
@@ -685,7 +801,7 @@ public final class LayeredCanvasRenderer {
         return new ColorMatrixColorFilter(matrix);
     }
 
-    private ColorMatrixColorFilter seasonalMountainFilter() {
+    private ColorMatrixColorFilter createSeasonalMountainFilter() {
         float r = 1f, g = 1f, b = 1f;
         if (state.season == SceneState.Season.AUTUMN) {
             r = 1.03f; g = 0.95f; b = 0.92f;
@@ -699,22 +815,15 @@ public final class LayeredCanvasRenderer {
     }
 
     private Bitmap asset(Context context, String path, int sampleSize) {
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = Math.max(1, sampleSize);
-        options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-        options.inScaled = false;
-        try (InputStream stream = context.getAssets().open(path)) {
-            Bitmap bitmap = BitmapFactory.decodeStream(stream, null, options);
-            if (bitmap != null) owned.add(bitmap);
-            return bitmap;
-        } catch (IOException ignored) {
-            return null;
-        }
+        Bitmap bitmap = SceneBitmapPool.acquire(context, path, sampleSize);
+        if (bitmap != null) owned.add(bitmap);
+        return bitmap;
     }
 
     public void dispose() {
+        recycleBackgroundCache();
         for (Bitmap bitmap : owned) {
-            if (bitmap != null && !bitmap.isRecycled()) bitmap.recycle();
+            SceneBitmapPool.release(bitmap);
         }
         owned.clear();
     }

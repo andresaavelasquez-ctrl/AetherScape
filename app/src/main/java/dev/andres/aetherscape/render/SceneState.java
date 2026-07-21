@@ -35,6 +35,7 @@ public final class SceneState {
     public boolean parallax;
     public boolean snowCaps;
     public int targetFps;
+    public boolean adaptiveRendering;
     public String weatherDescription;
 
     public SceneState() {
@@ -112,6 +113,7 @@ public final class SceneState {
         out.targetFps = p.getBoolean(AppPreferences.BATTERY_SAVER, false)
                 ? 15
                 : p.getInt(AppPreferences.TARGET_FPS, 30);
+        out.adaptiveRendering = p.getBoolean(AppPreferences.ADAPTIVE_RENDERING, true);
         return out;
     }
 
@@ -192,6 +194,7 @@ public final class SceneState {
         parallax = target.parallax;
         snowCaps = target.snowCaps;
         targetFps = target.targetFps;
+        adaptiveRendering = target.adaptiveRendering;
         weatherDescription = target.weatherDescription;
     }
 
@@ -203,7 +206,7 @@ public final class SceneState {
         c.effectIntensity = effectIntensity; c.motionIntensity = motionIntensity;
         c.showStars = showStars; c.showGlow = showGlow; c.showFireflies = showFireflies;
         c.showCampfires = showCampfires; c.showLightning = showLightning; c.parallax = parallax;
-        c.snowCaps = snowCaps; c.targetFps = targetFps; c.weatherDescription = weatherDescription;
+        c.snowCaps = snowCaps; c.targetFps = targetFps; c.adaptiveRendering = adaptiveRendering; c.weatherDescription = weatherDescription;
         return c;
     }
 

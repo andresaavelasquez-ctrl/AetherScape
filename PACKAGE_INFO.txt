@@ -1,11 +1,15 @@
-AetherScape v0.8.0-beta.11
-Renderer: Android native WallpaperService + hardware Canvas layered compositor
-Architecture: shared LayeredCanvasRenderer for preview and applied wallpaper
-Visual system: reorganized hero composition, full-resolution layers, atmospheric lighting, soft object shadows
-Weather: Open-Meteo, Google Weather API, OpenWeatherMap, WeatherAPI.com
-Tag: v0.8.0-beta.11
+AetherScape v0.9.0-beta.12
 
-Refinement pass: cleaner tree placement, clearer mountain silhouette, brighter sun/moon lighting and fixed reusable APK signing for in-place updates from this build onward.
+Package type: Android native live wallpaper source
+Release profile: Deep optimization
+Tag: v0.9.0-beta.12
+Application ID: dev.andres.aetherscape.beta (debug beta APK)
+Signing continuity: bundled AetherScape beta keystore
 
-Preview portrait: docs/renderer-v8-organized-preview.png
-Preview landscape: docs/renderer-v8-organized-preview-landscape.png
+Key improvements:
+- background composition cache at screen resolution
+- async preview and wallpaper asset loading
+- purpose-specific bitmap sampling
+- adaptive frame pacing
+- per-frame allocation and preference-read reduction
+- visible-tile-only layer drawing

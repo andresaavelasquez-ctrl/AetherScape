@@ -147,7 +147,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         titleBox.setOrientation(LinearLayout.VERTICAL);
 
         TextView title = text("AetherScape", 24, TEXT, true);
-        TextView subtitle = text("Live wallpaper climático · beta 0.7.1", 12, TEXT_SOFT, false);
+        TextView subtitle = text("Live wallpaper climático · beta 0.9", 12, TEXT_SOFT, false);
         titleBox.addView(title);
         titleBox.addView(subtitle);
         header.addView(titleBox, new LinearLayout.LayoutParams(0,
@@ -434,16 +434,20 @@ public final class MainActivity extends Activity implements SharedPreferences.On
     }
 
     private void buildPerformanceTab() {
-        addSpinner(settingsContent, "Límite de fotogramas", "30 FPS es el modo equilibrado recomendado para la beta.",
+        addSpinner(settingsContent, "Límite máximo de fotogramas", "El motor puede bajar temporalmente la frecuencia cuando la escena está tranquila.",
                 AppPreferences.TARGET_FPS,
                 new String[]{"15 FPS", "30 FPS", "60 FPS"},
                 new int[]{15, 30, 60}, 30);
+        addSwitch(settingsContent, "Optimización adaptativa", "Reduce trabajo invisible y ajusta los FPS según lluvia, viento, interacción y movimiento, sin reducir la resolución final.",
+                AppPreferences.ADAPTIVE_RENDERING, true, null);
+        addSwitch(settingsContent, "Vista previa eficiente", "La miniatura de la aplicación usa un ritmo reducido cuando no la estás tocando; el fondo aplicado conserva su calidad.",
+                AppPreferences.PREVIEW_ECO_MODE, true, null);
         addSwitch(settingsContent, "Ahorro de batería", "Fuerza 15 FPS y mantiene el motor detenido cuando el fondo no es visible.",
                 AppPreferences.BATTERY_SAVER, false, null);
 
         LinearLayout info = card();
-        info.addView(text("Motor beta", 16, TEXT, true));
-        info.addView(text("• Motor nativo Android Surface/Canvas\n• Misma escena en vista previa y fondo aplicado\n• Árboles agrupados por composición\n• Cámara segura para vertical y horizontal\n• Clima multiproveedor y modo de emergencia",
+        info.addView(text("Motor optimizado beta 0.9", 16, TEXT, true));
+        info.addView(text("• Capas lejanas agrupadas en una caché a resolución de pantalla\n• Texturas grandes decodificadas según su función visual\n• Sin lecturas de preferencias ni filtros nuevos en cada fotograma\n• Solo se dibujan las copias de capa realmente visibles\n• Vista previa suspendida al salir de la aplicación\n• Fondo detenido por completo cuando no es visible",
                 12, TEXT_SOFT, false));
         settingsContent.addView(info, cardParams());
 

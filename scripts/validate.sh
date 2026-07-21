@@ -10,6 +10,7 @@ required=(
   app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
   app/src/main/java/dev/andres/aetherscape/gdx/AetherGdxWallpaperService.java
   app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
+  app/src/main/java/dev/andres/aetherscape/render/SceneBitmapPool.java
   app/src/main/java/dev/andres/aetherscape/render/SceneState.java
   app/src/main/java/dev/andres/aetherscape/ui/ScenePreviewView.java
   app/src/main/java/dev/andres/aetherscape/weather/WeatherClient.java
@@ -35,11 +36,16 @@ grep -q 'android.service.wallpaper.WallpaperService' app/src/main/AndroidManifes
 grep -q 'wallpaper.AetherWallpaperService' app/src/main/AndroidManifest.xml
 grep -q 'gdx.AetherGdxWallpaperService' app/src/main/AndroidManifest.xml
 grep -q 'AetherWallpaperService.class' app/src/main/java/dev/andres/aetherscape/MainActivity.java
-grep -q "versionName '0.8.0-beta.11'" app/build.gradle
+grep -q "versionName '0.9.0-beta.12'" app/build.gradle
 grep -q 'LayeredCanvasRenderer' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'lockHardwareCanvas' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'drawEmergencyFrame' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'SEGMENT_WIDTH' app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
+grep -q 'ensureBackgroundCache' app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
+grep -q 'recommendedFps' app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
+grep -q 'SceneBitmapPool.acquire' app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
+grep -q 'AetherPreviewAssetLoader' app/src/main/java/dev/andres/aetherscape/ui/ScenePreviewView.java
+grep -q 'ADAPTIVE_RENDERING' app/src/main/java/dev/andres/aetherscape/prefs/AppPreferences.java
 grep -q 'open mountain vista' app/src/main/java/dev/andres/aetherscape/render/LayeredCanvasRenderer.java
 grep -q 'signingConfigs' app/build.gradle
 grep -q 'aetherscape-beta.jks' app/build.gradle
@@ -143,4 +149,4 @@ for path in paths:
 print(f"XML válido y {len(paths)} recursos PNG verificados sin Pillow.")
 PY
 
-echo "AetherScape v0.8.0-beta.11 package looks complete."
+echo "AetherScape v0.9.0-beta.12 package looks complete."

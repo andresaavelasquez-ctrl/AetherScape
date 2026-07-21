@@ -1,58 +1,59 @@
 # AetherScape
 
-**AetherScape v0.8.0-beta.11** es una aplicación Android de fondo vivo climático con paisaje 2D por capas, transiciones horarias, estaciones y varios proveedores meteorológicos.
+**AetherScape v0.9.0-beta.12** es un fondo de pantalla vivo climático para Android con paisaje 2D por capas, ciclo horario, estaciones y clima real.
 
 ![Vista vertical](docs/renderer-v8-organized-preview.png)
 
-## Cambio principal de esta versión
+## Novedad principal: optimización profunda
 
-Esta beta también mejora la organización del paisaje, eleva la resolución de las capas base y conserva el mismo keystore beta para que las próximas actualizaciones puedan instalarse encima de la app ya firmada con beta 10.
+Esta actualización conserva el diseño gráfico de beta 11, pero sustituye el flujo de renderizado pesado por un sistema adaptativo:
 
-La beta anterior renderizaba el fondo aplicado mediante un servicio libGDX/OpenGL separado de la vista previa. En algunos dispositivos el selector aceptaba el fondo, pero el servicio gráfico quedaba negro.
+- Las ilustraciones grandes se decodifican según dónde se usan: alta definición para el fondo aplicado y una copia ligera para la miniatura.
+- La montaña protagonista mantiene una fuente de mayor resolución.
+- El cielo, montañas lejanas y bosques se componen en una caché del tamaño exacto de la pantalla y se actualizan a una frecuencia apropiada para su movimiento lento.
+- El primer plano, la lluvia, la nieve, las luces y la interacción continúan animándose de forma independiente.
+- Solo se dibujan las repeticiones de capa que realmente entran en el campo de visión.
+- Los filtros de color se reutilizan, en lugar de recrearse en cada fotograma.
+- Las preferencias se consultan una vez por segundo o inmediatamente cuando cambian, no 15–60 veces por segundo.
+- La carga de texturas ocurre en hilos secundarios; abrir la aplicación ya no debe bloquear el launcher ni la interfaz de Android.
+- La vista previa baja a 15 FPS cuando está tranquila, sube hasta 24 FPS al interactuar y se detiene completamente al ocultar la aplicación.
+- El fondo aplicado ajusta temporalmente sus FPS según lluvia, viento e interacción, sin reducir su resolución.
+- El servicio deja de renderizar por completo cuando el fondo no es visible.
 
-Esta versión usa un único motor nativo compartido:
+## Memoria
+
+Las capas de beta 11 podían superar aproximadamente **500 MB decodificados por renderer**. Beta 12 utiliza perfiles de decodificación separados y una miniatura mucho más ligera. Además, existe un pool con conteo de referencias para evitar duplicados idénticos dentro del mismo proceso.
+
+## Calidad visual preservada
+
+La optimización no cambia la resolución de salida de Android. La composición final sigue renderizándose al tamaño real de la superficie del fondo. La reducción se aplica a fuentes sobredimensionadas, trabajo duplicado y frecuencia de capas lentas.
+
+## Motor
 
 ```text
-MainActivity / vista previa
+MainActivity / preview eficiente
           └── LayeredCanvasRenderer
-WallpaperService / pantalla de inicio
+              ├── caché de fondo a resolución de pantalla
+              └── primer plano y clima en tiempo real
+
+WallpaperService / hilo dedicado
           └── LayeredCanvasRenderer
 ```
 
-El servicio dibuja directamente sobre la superficie oficial de `WallpaperService`, usando `lockHardwareCanvas()` cuando el dispositivo lo permite y `lockCanvas()` como respaldo.
-
-## Mejoras visuales
-
-- Árboles distribuidos mediante plantillas de escena, no aleatoriamente por toda la pantalla.
-- Grupos de bosque en los bordes y una zona central libre para la montaña principal.
-- Cinco tipos de segmento: vista abierta, entrada de bosque, sendero con faroles, claro y cresta dispersa.
-- Montañas cercanas más anchas y menos puntiagudas.
-- Bosques lejanos agrupados con claros visibles.
-- Misma altura lógica de `1000` unidades en vertical y horizontal.
-- Sol, luna, faroles y fogatas con iluminación radial suave.
-- Niebla, lluvia, nieve, viento, estrellas y luciérnagas animados.
-- Colores estacionales aplicados a bosques y montañas.
-
-## Correcciones del fondo aplicado
-
-- El componente que abre Android ahora es `AetherWallpaperService`.
-- Se conserva un alias de migración para el componente de la beta 0.5, evitando que una actualización deje el fondo anterior sin servicio.
-- El manifiesto registra el mismo servicio que usa el botón **Aplicar como fondo de pantalla**.
-- Se dibuja un primer fotograma al crear la superficie, incluso antes de que el launcher marque el fondo como visible.
-- Si el Canvas acelerado no está disponible, se utiliza Canvas convencional.
-- Si una capa falla, se dibuja una escena de emergencia en lugar de dejar la pantalla negra.
-- Toques, desplazamiento del launcher y cambios de ajustes fuerzan un nuevo fotograma.
+El servicio utiliza `lockHardwareCanvas()` y recurre a `lockCanvas()` si el dispositivo no admite la ruta acelerada.
 
 ## Clima
-
-Proveedores compatibles:
 
 - Open-Meteo, sin clave.
 - Google Weather API.
 - OpenWeatherMap.
 - WeatherAPI.com.
 
-## Compilar y publicar desde Termux
+## Actualización sobre versiones anteriores
+
+Se conserva exactamente el mismo `applicationId`, `versionCode` ascendente y keystore beta usado desde beta 10. Por ello, beta 12 puede instalarse encima de beta 10 o beta 11 sin desinstalar, siempre que la APK anterior haya sido firmada con esa misma clave.
+
+## Publicar desde Termux
 
 ```bash
 cd "$HOME"
@@ -60,26 +61,19 @@ rm -rf "$HOME/AetherScape-release"
 mkdir -p "$HOME/AetherScape-release"
 
 unzip -o \
-  "$HOME/storage/downloads/AetherScape-v0.8.0-beta.11-organized-lighting-source.zip" \
+  "$HOME/storage/downloads/AetherScape-v0.9.0-beta.12-deep-optimization-source.zip" \
   -d "$HOME/AetherScape-release"
 
 cd "$HOME/AetherScape-release/AetherScape-beta"
 bash scripts/validate.sh
-bash scripts/publish-termux.sh AetherScape v0.8.0-beta.11
+bash scripts/publish-termux.sh AetherScape v0.9.0-beta.12
 ```
 
-Para vigilar GitHub Actions:
+Para consultar GitHub Actions:
 
 ```bash
 OWNER="$(gh api user --jq .login)"
 gh run list --repo "$OWNER/AetherScape" --limit 5
 ```
 
-## Estado beta
-
-La estructura, XML, recursos PNG y scripts se validan localmente. La compilación Android completa se ejecuta en GitHub Actions.
-
-
-## Corrección v0.8.0-beta.11
-
-Esta revisión elimina la dependencia accidental de Pillow en `scripts/validate.sh`. GitHub Actions y Termux pueden validar los recursos PNG usando solo Python estándar.
+La validación local comprueba estructura, XML, recursos PNG, continuidad del keystore y presencia de las optimizaciones. La compilación Android completa se ejecuta en GitHub Actions.

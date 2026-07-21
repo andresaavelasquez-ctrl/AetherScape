@@ -41,6 +41,8 @@ public final class AppPreferences {
 
     public static final String TARGET_FPS = "target_fps";
     public static final String BATTERY_SAVER = "battery_saver";
+    public static final String ADAPTIVE_RENDERING = "adaptive_rendering";
+    public static final String PREVIEW_ECO_MODE = "preview_eco_mode";
 
     public static final String WEATHER_CONDITION = "weather_condition";
     public static final String WEATHER_DESCRIPTION = "weather_description";
@@ -95,6 +97,8 @@ public final class AppPreferences {
                 .putInt(MOTION_INTENSITY, 55)
                 .putInt(TARGET_FPS, 30)
                 .putBoolean(BATTERY_SAVER, false)
+                .putBoolean(ADAPTIVE_RENDERING, true)
+                .putBoolean(PREVIEW_ECO_MODE, true)
                 .putString(WEATHER_CONDITION, "CLEAR")
                 .putString(WEATHER_DESCRIPTION, "Clima de demostración")
                 .putFloat(WEATHER_TEMP_C, 18f)
