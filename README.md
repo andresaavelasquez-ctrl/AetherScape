@@ -1,10 +1,12 @@
 # AetherScape
 
-**AetherScape v0.7.1-beta.10** es una aplicación Android de fondo vivo climático con paisaje 2D por capas, transiciones horarias, estaciones y varios proveedores meteorológicos.
+**AetherScape v0.8.0-beta.11** es una aplicación Android de fondo vivo climático con paisaje 2D por capas, transiciones horarias, estaciones y varios proveedores meteorológicos.
 
-![Vista vertical](docs/renderer-v5-native-preview.png)
+![Vista vertical](docs/renderer-v8-organized-preview.png)
 
 ## Cambio principal de esta versión
+
+Esta beta también mejora la organización del paisaje, eleva la resolución de las capas base y conserva el mismo keystore beta para que las próximas actualizaciones puedan instalarse encima de la app ya firmada con beta 10.
 
 La beta anterior renderizaba el fondo aplicado mediante un servicio libGDX/OpenGL separado de la vista previa. En algunos dispositivos el selector aceptaba el fondo, pero el servicio gráfico quedaba negro.
 
@@ -58,12 +60,12 @@ rm -rf "$HOME/AetherScape-release"
 mkdir -p "$HOME/AetherScape-release"
 
 unzip -o \
-  "$HOME/storage/downloads/AetherScape-v0.7.1-beta.10-validation-fix-source.zip" \
+  "$HOME/storage/downloads/AetherScape-v0.8.0-beta.11-organized-lighting-source.zip" \
   -d "$HOME/AetherScape-release"
 
 cd "$HOME/AetherScape-release/AetherScape-beta"
 bash scripts/validate.sh
-bash scripts/publish-termux.sh AetherScape v0.7.1-beta.10
+bash scripts/publish-termux.sh AetherScape v0.8.0-beta.11
 ```
 
 Para vigilar GitHub Actions:
@@ -78,6 +80,6 @@ gh run list --repo "$OWNER/AetherScape" --limit 5
 La estructura, XML, recursos PNG y scripts se validan localmente. La compilación Android completa se ejecuta en GitHub Actions.
 
 
-## Corrección v0.7.1-beta.10
+## Corrección v0.8.0-beta.11
 
 Esta revisión elimina la dependencia accidental de Pillow en `scripts/validate.sh`. GitHub Actions y Termux pueden validar los recursos PNG usando solo Python estándar.

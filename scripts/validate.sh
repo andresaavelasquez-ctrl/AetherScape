@@ -35,7 +35,7 @@ grep -q 'android.service.wallpaper.WallpaperService' app/src/main/AndroidManifes
 grep -q 'wallpaper.AetherWallpaperService' app/src/main/AndroidManifest.xml
 grep -q 'gdx.AetherGdxWallpaperService' app/src/main/AndroidManifest.xml
 grep -q 'AetherWallpaperService.class' app/src/main/java/dev/andres/aetherscape/MainActivity.java
-grep -q "versionName '0.7.1-beta.10'" app/build.gradle
+grep -q "versionName '0.8.0-beta.11'" app/build.gradle
 grep -q 'LayeredCanvasRenderer' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'lockHardwareCanvas' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
 grep -q 'drawEmergencyFrame' app/src/main/java/dev/andres/aetherscape/wallpaper/AetherWallpaperService.java
@@ -143,4 +143,4 @@ for path in paths:
 print(f"XML válido y {len(paths)} recursos PNG verificados sin Pillow.")
 PY
 
-echo "AetherScape v0.7.1-beta.10 package looks complete."
+echo "AetherScape v0.8.0-beta.11 package looks complete."

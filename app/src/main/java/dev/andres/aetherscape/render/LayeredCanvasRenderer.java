@@ -246,6 +246,18 @@ public final class LayeredCanvasRenderer {
         shapePaint.setShader(new LinearGradient(0, 0, 0, height, top, bottom, Shader.TileMode.CLAMP));
         canvas.drawRect(0, 0, width, height, shapePaint);
         shapePaint.setShader(null);
+
+        // Cooler upper vignette and warmer horizon haze add cinematic depth.
+        shapePaint.setShader(new LinearGradient(0, 0, 0, height * 0.52f,
+                Color.argb(42, 6, 10, 24), Color.TRANSPARENT, Shader.TileMode.CLAMP));
+        canvas.drawRect(0, 0, width, height * 0.52f, shapePaint);
+        shapePaint.setShader(null);
+
+        int horizonAlpha = (int) (34 * (0.34f + state.effectIntensity * 0.66f) * (1f - state.rain * 0.55f));
+        shapePaint.setShader(new LinearGradient(0, height * 0.48f, 0, height,
+                Color.TRANSPARENT, Color.argb(horizonAlpha, 255, 173, 126), Shader.TileMode.CLAMP));
+        canvas.drawRect(0, height * 0.48f, width, height, shapePaint);
+        shapePaint.setShader(null);
     }
 
     private void drawCelestial(Canvas canvas, float scale, float visibleWorldWidth, float parallax) {
@@ -254,14 +266,14 @@ public final class LayeredCanvasRenderer {
         float progress = sun
                 ? clamp01((hour - 5.5f) / 14f)
                 : clamp01(hour < 6f ? (hour + 6f) / 12f : (hour - 18f) / 12f);
-        float worldX = -visibleWorldWidth * 0.31f + visibleWorldWidth * progress * 0.70f + parallax * 11f;
+        float worldX = -visibleWorldWidth * 0.29f + visibleWorldWidth * progress * 0.67f + parallax * 10f;
         float worldY = sun
-                ? 655f + (float) Math.sin(progress * Math.PI) * 202f
-                : 725f + (float) Math.sin(progress * Math.PI) * 105f;
+                ? 655f + (float) Math.sin(progress * Math.PI) * 208f
+                : 728f + (float) Math.sin(progress * Math.PI) * 108f;
         float x = (worldX + visibleWorldWidth * 0.5f) * scale;
         float y = (WORLD_HEIGHT - worldY) * scale;
-        float radius = (sun ? 31f : 25f) * scale;
-        float visibility = Math.max(0.10f, 1f - state.cloud * 0.70f);
+        float radius = (sun ? 34f : 27f) * scale;
+        float visibility = Math.max(0.10f, 1f - state.cloud * 0.72f);
 
         celestialWorldX = worldX;
         celestialWorldY = worldY;
@@ -269,32 +281,40 @@ public final class LayeredCanvasRenderer {
         celestialSun = sun;
 
         if (state.showGlow) {
-            float outerGlowRadius = radius * (sun ? 7.8f : 5.6f);
+            float outerGlowRadius = radius * (sun ? 9.1f : 6.4f);
             int outer = sun
-                    ? Color.argb((int) (54 * visibility), 255, 181, 124)
-                    : Color.argb((int) (34 * visibility), 214, 224, 255);
-            shapePaint.setShader(new RadialGradient(x, y, outerGlowRadius,
-                    outer, Color.TRANSPARENT, Shader.TileMode.CLAMP));
+                    ? Color.argb((int) (58 * visibility), 255, 182, 125)
+                    : Color.argb((int) (36 * visibility), 210, 221, 255);
+            shapePaint.setShader(new RadialGradient(x, y, outerGlowRadius, outer, Color.TRANSPARENT, Shader.TileMode.CLAMP));
             canvas.drawCircle(x, y, outerGlowRadius, shapePaint);
             shapePaint.setShader(null);
 
-            float innerGlowRadius = radius * (sun ? 5.2f : 4.0f);
+            float innerGlowRadius = radius * (sun ? 5.8f : 4.3f);
             int center = sun
-                    ? Color.argb((int) (102 * visibility), 255, 172, 111)
-                    : Color.argb((int) (74 * visibility), 203, 218, 255);
-            shapePaint.setShader(new RadialGradient(x, y, innerGlowRadius,
-                    center, Color.TRANSPARENT, Shader.TileMode.CLAMP));
+                    ? Color.argb((int) (112 * visibility), 255, 174, 112)
+                    : Color.argb((int) (82 * visibility), 205, 219, 255);
+            shapePaint.setShader(new RadialGradient(x, y, innerGlowRadius, center, Color.TRANSPARENT, Shader.TileMode.CLAMP));
             canvas.drawCircle(x, y, innerGlowRadius, shapePaint);
             shapePaint.setShader(null);
         }
 
-        shapePaint.setColor(sun
-                ? Color.argb((int) (255 * visibility), 255, 239, 189)
-                : Color.argb((int) (255 * visibility), 238, 240, 226));
-        canvas.drawCircle(x, y, radius, shapePaint);
-        if (!sun) {
-            shapePaint.setColor(blend(skyTopColor(), skyBottomColor(), 0.46f));
-            canvas.drawCircle(x + radius * 0.42f, y - radius * 0.12f, radius * 0.92f, shapePaint);
+        if (sun) {
+            // Main sun disc with soft spherical shading.
+            shapePaint.setShader(new RadialGradient(x - radius * 0.26f, y - radius * 0.24f, radius * 1.55f,
+                    Color.argb((int) (255 * visibility), 255, 247, 206),
+                    Color.argb((int) (255 * visibility), 255, 228, 164), Shader.TileMode.CLAMP));
+            canvas.drawCircle(x, y, radius, shapePaint);
+            shapePaint.setShader(null);
+            shapePaint.setColor(Color.argb((int) (48 * visibility), 224, 164, 110));
+            canvas.drawCircle(x + radius * 0.18f, y + radius * 0.16f, radius * 0.96f, shapePaint);
+        } else {
+            // Full moon body with earthshine and a soft shadow that leaves a crescent.
+            shapePaint.setColor(Color.argb((int) (48 * visibility), 188, 196, 220));
+            canvas.drawCircle(x, y, radius * 1.04f, shapePaint);
+            shapePaint.setColor(Color.argb((int) (255 * visibility), 236, 239, 228));
+            canvas.drawCircle(x, y, radius, shapePaint);
+            shapePaint.setColor(blend(skyTopColor(), skyBottomColor(), 0.42f));
+            canvas.drawCircle(x + radius * 0.46f, y - radius * 0.08f, radius * 0.94f, shapePaint);
         }
     }
 
@@ -306,9 +326,9 @@ public final class LayeredCanvasRenderer {
         float y = (WORLD_HEIGHT - celestialWorldY) * scale;
 
         int hazeColor = celestialSun
-                ? Color.argb((int) (40 * visibility), 255, 190, 136)
-                : Color.argb((int) (20 * visibility), 198, 210, 242);
-        float hazeRadius = height * (celestialSun ? 0.34f : 0.25f);
+                ? Color.argb((int) (56 * visibility), 255, 190, 136)
+                : Color.argb((int) (28 * visibility), 200, 212, 246);
+        float hazeRadius = height * (celestialSun ? 0.38f : 0.28f);
         shapePaint.setShader(new RadialGradient(x, y, hazeRadius, hazeColor,
                 Color.TRANSPARENT, Shader.TileMode.CLAMP));
         canvas.drawCircle(x, y, hazeRadius, shapePaint);
@@ -360,17 +380,17 @@ public final class LayeredCanvasRenderer {
         for (int segment = start; segment <= end; segment++) {
             int template = positiveMod(segment, 4);
             float[] positions = template == 0
-                    ? new float[]{0.06f, 0.16f, 0.78f, 0.89f}
+                    ? new float[]{0.07f, 0.18f, 0.80f, 0.91f}
                     : template == 1
-                    ? new float[]{0.04f, 0.12f, 0.22f, 0.70f, 0.80f, 0.91f}
+                    ? new float[]{0.05f, 0.15f, 0.24f, 0.76f, 0.86f, 0.94f}
                     : template == 2
-                    ? new float[]{0.08f, 0.19f, 0.30f, 0.82f, 0.91f}
-                    : new float[]{0.05f, 0.15f, 0.75f, 0.84f, 0.93f};
+                    ? new float[]{0.08f, 0.18f, 0.27f, 0.83f, 0.92f}
+                    : new float[]{0.05f, 0.14f, 0.78f, 0.87f, 0.95f};
             for (int i = 0; i < positions.length; i++) {
                 float worldX = segment * SEGMENT_WIDTH + positions[i] * SEGMENT_WIDTH;
                 float screenWorldX = worldX - layerScroll;
                 if (!visible(screenWorldX, visibleWorldWidth, 220f)) continue;
-                float corridor = heroCorridor(worldX, 120f, 360f);
+                float corridor = heroCorridor(worldX, 170f, 470f);
                 if (corridor <= 0.08f) continue;
                 Bitmap tree = corridor < 0.45f ? pineSparse : pickBackTree(segment, i);
                 float height = (112f + hash01(segment * 91 + i * 37) * 118f) * (0.72f + corridor * 0.28f);
@@ -400,24 +420,24 @@ public final class LayeredCanvasRenderer {
             float[] sizes;
             switch (template) {
                 case 0: // open mountain vista
-                    positions = new float[]{0.04f, 0.14f, 0.88f};
-                    sizes = new float[]{0.92f, 0.68f, 0.78f};
+                    positions = new float[]{0.05f, 0.15f, 0.90f};
+                    sizes = new float[]{0.88f, 0.62f, 0.76f};
                     break;
                 case 1: // forest entrance, grouped at edges
-                    positions = new float[]{0.03f, 0.11f, 0.20f, 0.79f, 0.89f, 0.96f};
-                    sizes = new float[]{0.92f, 0.72f, 0.58f, 0.56f, 0.75f, 0.95f};
+                    positions = new float[]{0.03f, 0.11f, 0.20f, 0.81f, 0.90f, 0.97f};
+                    sizes = new float[]{0.88f, 0.68f, 0.54f, 0.52f, 0.72f, 0.92f};
                     break;
                 case 2: // lantern trail
-                    positions = new float[]{0.05f, 0.17f, 0.80f, 0.93f};
-                    sizes = new float[]{0.82f, 0.61f, 0.57f, 0.82f};
+                    positions = new float[]{0.05f, 0.16f, 0.84f, 0.95f};
+                    sizes = new float[]{0.78f, 0.56f, 0.54f, 0.78f};
                     break;
                 case 3: // quiet clearing
-                    positions = new float[]{0.04f, 0.13f, 0.91f};
-                    sizes = new float[]{0.72f, 0.53f, 0.74f};
+                    positions = new float[]{0.05f, 0.15f, 0.92f};
+                    sizes = new float[]{0.68f, 0.50f, 0.70f};
                     break;
                 default: // sparse ridge
-                    positions = new float[]{0.07f, 0.22f, 0.82f, 0.94f};
-                    sizes = new float[]{0.77f, 0.48f, 0.54f, 0.85f};
+                    positions = new float[]{0.07f, 0.21f, 0.84f, 0.95f};
+                    sizes = new float[]{0.74f, 0.46f, 0.52f, 0.80f};
                     break;
             }
 
@@ -425,7 +445,7 @@ public final class LayeredCanvasRenderer {
                 float worldX = segment * SEGMENT_WIDTH + positions[i] * SEGMENT_WIDTH;
                 float screenWorldX = worldX - layerScroll;
                 if (!visible(screenWorldX, visibleWorldWidth, 300f)) continue;
-                float corridor = heroCorridor(worldX, 150f, 420f);
+                float corridor = heroCorridor(worldX, 230f, 560f);
                 if (corridor <= 0.05f) continue;
                 Bitmap tree = corridor < 0.52f ? pineSparse : pickFrontTree(segment, i, template);
                 if (corridor < 0.40f && tree == pineDead) tree = pineSparse;
@@ -624,7 +644,7 @@ public final class LayeredCanvasRenderer {
 
     private Bitmap pickFrontTree(int segment, int index, int template) {
         int value = positiveMod(segment * 23 + index * 11 + template * 3, 9);
-        if (value == 0 && template != 1) return pineDead;
+        if (value == 0 && template == 4) return pineDead;
         if (value <= 3) return pineSparse;
         if (value >= 7) return pineTall;
         return pineMedium;
@@ -647,7 +667,7 @@ public final class LayeredCanvasRenderer {
             case WINTER:
                 r = 0.86f; g = 0.92f; b = 1.02f; break;
         }
-        float dark = (0.78f + depth * 0.18f) * (1f - night * 0.12f);
+        float dark = (0.82f + depth * 0.16f) * (1f - night * 0.10f);
         ColorMatrix matrix = new ColorMatrix(new float[]{
                 r * dark, 0, 0, 0, 0,
                 0, g * dark, 0, 0, 0,
@@ -658,7 +678,7 @@ public final class LayeredCanvasRenderer {
     }
 
     private ColorMatrixColorFilter atmosphericFilter(float brightness) {
-        float cloudDimming = 1f - state.cloud * 0.08f - state.rain * 0.08f;
+        float cloudDimming = 1f - state.cloud * 0.06f - state.rain * 0.07f;
         float value = brightness * cloudDimming;
         ColorMatrix matrix = new ColorMatrix();
         matrix.setScale(value, value, value * 1.03f, 1f);
@@ -672,7 +692,7 @@ public final class LayeredCanvasRenderer {
         } else if (state.season == SceneState.Season.WINTER) {
             r = 0.94f; g = 0.98f; b = 1.05f;
         }
-        float dim = 1f - state.rain * 0.08f - state.storm * 0.12f;
+        float dim = 1f - state.rain * 0.06f - state.storm * 0.10f;
         ColorMatrix matrix = new ColorMatrix();
         matrix.setScale(r * dim, g * dim, b * dim, 1f);
         return new ColorMatrixColorFilter(matrix);
@@ -682,6 +702,7 @@ public final class LayeredCanvasRenderer {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = Math.max(1, sampleSize);
         options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+        options.inScaled = false;
         try (InputStream stream = context.getAssets().open(path)) {
             Bitmap bitmap = BitmapFactory.decodeStream(stream, null, options);
             if (bitmap != null) owned.add(bitmap);

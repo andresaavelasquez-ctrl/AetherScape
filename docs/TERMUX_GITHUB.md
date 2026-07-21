@@ -15,12 +15,12 @@ rm -rf "$HOME/AetherScape-release"
 mkdir -p "$HOME/AetherScape-release"
 
 unzip -o \
-  "$HOME/storage/downloads/AetherScape-v0.7.1-beta.10-validation-fix-source.zip" \
+  "$HOME/storage/downloads/AetherScape-v0.8.0-beta.11-organized-lighting-source.zip" \
   -d "$HOME/AetherScape-release"
 
 cd "$HOME/AetherScape-release/AetherScape-beta"
 bash scripts/validate.sh
-bash scripts/publish-termux.sh AetherScape v0.7.1-beta.10
+bash scripts/publish-termux.sh AetherScape v0.8.0-beta.11
 ```
 
 Comprobar la compilación:

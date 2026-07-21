@@ -1,4 +1,4 @@
-## v0.7.1-beta.10
+## v0.8.0-beta.11
 
 - Corrige el empaquetado: el keystore beta ya no se pierde por la regla `*.jks` de `.gitignore`.
 - El script de publicación fuerza la inclusión del mismo keystore de beta 0.7.
